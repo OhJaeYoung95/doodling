@@ -1,0 +1,1 @@
+globalThis.HW40_PACKS = {"builtin":null,"packs":[],"themes":[{"id":"quiet-office","name":"조용한 사무실","cast":[{"id":"hodu"},{"id":"mong","size":72},{"id":"kong"}]}],"site":"https://ohjaeyoung95.github.io/doodling/"};

@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>두들링 — 퇴근을 같이 기다리는 낙서 요정</title>
+<style>
+  :root {
+    --bg: #f7f5f0; --card: #ffffff; --text: #2b2620; --muted: #6b6359; --line: #e3ddd2;
+    --accent: #7fa650; --accent-ink: #ffffff; --code: #f1ede5; --warn: #b5651d;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #1d1b18; --card: #272420; --text: #ece6dc; --muted: #a8a094; --line: #3a362f;
+      --accent: #8fbf5c; --accent-ink: #15130f; --code: #322e28; --warn: #e3a062; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.65 'Pretendard', 'Malgun Gothic', system-ui, sans-serif; }
+  main { max-width: 680px; margin: 0 auto; padding: 48px 16px 64px; }
+  h1 { font-size: 28px; line-height: 1.3; margin: 0 0 8px; }
+  h2 { font-size: 19px; margin: 40px 0 12px; }
+  p { margin: 0 0 12px; }
+  .lead { color: var(--muted); margin-bottom: 28px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
+  ol.steps { margin: 0; padding: 0; list-style: none; counter-reset: s; }
+  ol.steps > li { counter-increment: s; position: relative; padding: 0 0 20px 44px; }
+  ol.steps > li:last-child { padding-bottom: 0; }
+  ol.steps > li::before { content: counter(s); position: absolute; left: 0; top: 0; width: 28px; height: 28px;
+    border-radius: 50%; background: var(--accent); color: var(--accent-ink); font-weight: 700;
+    display: grid; place-items: center; font-size: 14px; }
+  ol.steps strong { display: block; }
+  .install { display: inline-block; margin-top: 8px; padding: 10px 20px; border-radius: 8px;
+    background: var(--accent); color: var(--accent-ink); font-weight: 700; text-decoration: none; }
+  a { color: inherit; }
+  code { background: var(--code); padding: 1px 6px; border-radius: 4px; font-size: 14px; word-break: break-all; }
+  pre { background: var(--code); padding: 10px 12px; border-radius: 8px; overflow-x: auto; margin: 6px 0; }
+  pre code { background: none; padding: 0; font-size: 13px; word-break: break-all; white-space: pre-wrap; }
+  h3 { font-size: 17px; margin: 24px 0 8px; }
+  ul { margin: 0; padding-left: 20px; }
+  li + li { margin-top: 4px; }
+  dl { margin: 0; }
+  dt { font-weight: 700; margin-top: 12px; }
+  dt:first-child { margin-top: 0; }
+  dd { margin: 2px 0 0; color: var(--muted); }
+  .note { color: var(--warn); }
+  footer { margin-top: 40px; color: var(--muted); font-size: 14px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>두들링</h1>
+  <p class="lead"><b>두들링</b>은 종이에서 빠져나온 낙서 요정들이에요. 근무 페이지에 금요일 퇴근 가능 시각(주 40시간 기준)을 띄우고, 화면 아래를 돌아다니며 퇴근 시간을 함께 기다려 줘요. 한 번 설치하면 업데이트는 자동으로 받아요.</p>
+
+  <h2>설치하기</h2>
+  <div class="card">
+    <ol class="steps">
+      <li>
+        <strong>Tampermonkey 설치</strong>
+        Chrome 웹 스토어에서 <a href="https://chromewebstore.google.com/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo" target="_blank" rel="noopener">Tampermonkey</a>를 설치합니다. 무료예요.
+      </li>
+      <li>
+        <strong>사용자 스크립트 허용 켜기</strong>
+        주소창에 <code>chrome://extensions</code>를 입력하고, Tampermonkey의 <b>세부정보</b>에서 <b>사용자 스크립트 허용</b>을 켭니다. 이 항목이 없다면 오른쪽 위 <b>개발자 모드</b>를 켜 주세요.
+      </li>
+      <li>
+        <strong>스크립트 설치</strong>
+        아래 버튼을 누르면 Tampermonkey 설치 화면이 뜹니다. <b>설치</b>를 누르세요.<br>
+        <a class="install" href="hiworks-40h.user.js">스크립트 설치 (v2.0.34)</a>
+      </li>
+      <li>
+        <strong>근무 페이지 새로고침</strong>
+        하이웍스 근무 페이지를 F5로 새로고침하면 오른쪽 아래에 패널이 나타나요.
+      </li>
+    </ol>
+  </div>
+
+  <h2>계산 규칙</h2>
+  <ul>
+    <li>주 40시간을 채워야 해요.</li>
+    <li>근무는 09:00부터 세요. 그보다 일찍 출근해도 09:00 전 시간은 넣지 않아요.</li>
+    <li>점심시간 13:00~14:00은 근무시간에서 빠져요.</li>
+    <li>금요일에 40시간을 일찍 채우면 17:00에 퇴근할 수 있고, 못 채웠으면 채우는 시각까지 근무해요.</li>
+    <li>주간 합계의 휴가 시간도 40시간에 포함해요.</li>
+    <li>월~목에는 목요일까지 하루 8시간씩 일한다고 보고 금요일 예상 퇴근 시각을 보여 줘요.</li>
+  </ul>
+
+  <h2>사용법</h2>
+  <ul>
+    <li>화면 오른쪽 아래에 아이콘 다섯 개가 있어요: <b>근무</b>(퇴근 시각), <b>모이기</b>(동료와 대화), <b>테마</b>(캐릭터 고르기), <b>설정</b>(회사 규칙), <b>친구</b>(캐릭터 켜고 끄기).</li>
+    <li>근무·모이기·테마·설정은 각각 따로 종이처럼 펼쳐져요. 아이콘을 다시 누르거나 종이의 <b>–</b>를 누르면 접혀요. 근무 종이를 접으면 퇴근 시각만 작게 남아요. 펼쳐 둔 종이는 다음에도 그대로 열려요.</li>
+    <li>오른쪽 아래 <b>친구</b> 아이콘으로 캐릭터를 끄고 켤 수 있어요. 설정은 각자 저장돼요.</li>
+    <li>캐릭터들은 종이에서 빠져나와 돌아다녀요. 캐릭터를 누르면 동그란 버튼이 나와요: 남은 시간, 점프, 쓰다듬기, 간식, 특기, <b>📄 가두기</b>.</li>
+    <li><b>가두기</b>를 누르면 캐릭터가 종이에 붙어 왼쪽 벽으로 날아가요. 벽의 종이를 누르면 다시 풀려나요.</li>
+    <li>캐릭터를 끌어 올렸다 놓으면 떨어져요.</li>
+    <li>오른쪽 아래 <b>모이기</b> 아이콘으로 동료들과 모여 캐릭터로 대화할 수 있어요. 아래 <a href="#gather">동료와 모이기</a>를 보세요.</li>
+    <li>오른쪽 아래 <b>테마</b> 아이콘으로 캐릭터 테마를 고르고, 동료에게 받은 <b>테마 코드</b>를 넣을 수 있어요.</li>
+  </ul>
+
+  <h2 id="gather">동료와 모이기</h2>
+  <p>방 코드 하나로 동료들과 모이는 작은 방이에요 (최대 8명). 방에 있는 동안 모두의 화면에 방장의 테마 캐릭터들이 돌아다니고, 각자 고른 <b>아바타</b>가 머리 위에 이름을 달고 나와요.</p>
+  <div class="card">
+    <ol class="steps">
+      <li><strong>방장: 방 만들기</strong>오른쪽 아래 <b>모이기</b> 아이콘 → 이름과 아바타를 고르고 <b>방 만들기</b>를 눌러요. <b>K7Q2-M9XA</b> 같은 8글자 방 코드가 떠요.</li>
+      <li><strong>방장: 방 코드 알려 주기</strong><b>코드 복사</b> → 메신저로 동료들에게 보내요. 몇 명이든 같은 코드로 들어와요. 코드는 모이기 종이의 <b>보기·복사</b>로 언제든 다시 볼 수 있어요.</li>
+      <li><strong>동료: 들어가기</strong><b>모이기</b> 아이콘 → <b>방 코드로 들어가기</b> → 받은 코드를 넣고 <b>들어가기</b>. 몇 초 안에 아바타가 방에 걸어 들어가요.</li>
+    </ol>
+  </div>
+  <ul style="margin-top:12px">
+    <li>할 말을 적고 Enter를 누르면 아바타 말풍선과 왼쪽 벽 <b>칠판</b>에 적혀요. 내 말은 칠판 오른쪽, 다른 사람 말은 왼쪽이에요. 칠판 오른쪽 위 손잡이를 끌면 크기를 바꿀 수 있어요 (두 번 누르면 원래 크기). 가둔 캐릭터의 종이는 칠판 위에 붙어요.</li>
+    <li>내 아바타를 누르면 <b>👕 갈아입기</b>로 캐릭터를 바꿀 수 있어요. 모든 캐릭터 중에서 고를 수 있어요.</li>
+    <li>방장이 사람 이름을 누르면 <b>✏️ 꾸미기 권한</b>을 줄 수 있어요. 권한을 받은 사람은 자기 캐릭터를 방에 데려오거나 방 캐릭터를 뺄 수 있어요.</li>
+    <li><b>방에서 나가기</b>를 누르면 내 아바타가 다른 사람 화면의 왼쪽 벽에 잠시 붙었다가 사라지고, 내 화면은 내 테마로 돌아와요.</li>
+    <li class="note">방장이 <b>방 닫기</b>를 누르거나 <b>새로고침·창 닫기</b>를 하면 방이 닫혀요. 동료가 새로고침하면 그 사람만 나가고, 같은 코드로 다시 들어올 수 있어요.</li>
+    <li>방의 말은 작은 중계 서버를 거쳐 전해져요. 브라우저에서 방 코드로 잠가서 보내기 때문에 서버는 내용을 읽지 못하고, 아무것도 저장하지 않아요. 방 코드는 방에 있는 사람들끼리만 나눠 주세요.</li>
+  </ul>
+
+  <h2>내 캐릭터 만들기</h2>
+  <p><a href="maker.html">캐릭터 만들기</a> 페이지에서 그림을 끌어다 놓으면 나만의 캐릭터가 돼요. GitHub 가입은 필요 없어요.</p>
+  <ol>
+    <li><b>서 있을 때</b> 칸에 그림을 넣어요. 걷기·축하 같은 다른 칸은 넣고 싶을 때만 넣어요.</li>
+    <li><b>캐릭터 코드 만들기</b>를 누르고 <b>코드 복사</b>(길면 <b>파일로 저장</b>)를 눌러요.</li>
+    <li><b>테마 만들기에 넣기</b>를 누르고, <a href="themes.html">테마 만들기</a>에서 그 캐릭터를 넣어 테마를 만들어요. 받은 캐릭터 코드도 테마 만들기의 <b>캐릭터 코드 넣기</b>에 넣으면 돼요.</li>
+    <li>내 화면에 쓰려면 테마 만들기 화면의 <b>내 테마 목록에 저장</b>을 누르세요. 하이웍스 탭으로 돌아가면 내 테마 목록에 들어와 있고, <b>바로 적용</b>을 켜 두면 그 테마로 바로 바뀌어요.</li>
+    <li>동료에게 줄 때는 테마 코드를 복사해 보내요. 받은 사람이 하이웍스 화면 오른쪽 아래 <b>테마 → ＋ 테마 코드 넣기</b>에 붙여 넣으면 화면에 나와요. 테마 코드에는 캐릭터 그림도 함께 들어 있어서, 동료에게 보내면 동료 화면에도 그대로 나와요.</li>
+  </ol>
+  <p>캐릭터는 각자 브라우저에만 저장되고 어디로도 올라가지 않아요. 직접 그렸거나 써도 되는 그림만 넣어 주세요.</p>
+
+  <h2>다른 근무 페이지에서 쓰기</h2>
+  <p>하이웍스가 아니어도, 근무시간이 화면에 글자로 나오는 웹 근무 페이지라면 쓸 수 있어요. 근무시간을 사람이 조절하는 <b>유연근무제</b>(주·월 단위 선택근무, 시차출퇴근)에 맞춰져 있어요.</p>
+  <ol>
+    <li>근무 페이지를 열고 Tampermonkey 아이콘 → <b>⏱ 이 사이트에서 두들링 켜기</b>를 눌러요.</li>
+    <li>오른쪽 아래 <b>설정</b> 아이콘에서 근무 방식(주 단위 / 월 단위 / 하루 단위)과 목표 시간, 근무 인정 시작, 점심시간을 맞춰요.</li>
+    <li><b>읽을 곳 가르치기</b>를 누르고, 안내에 따라 화면에서 <b>누적 근무시간 → 출근 시각 → 퇴근 시각 → 휴가</b> 칸을 차례로 눌러요. 없는 칸은 건너뛰면 돼요.</li>
+    <li>패널에 계산이 나오면 끝이에요. <b>설정 코드 복사</b>로 같은 근무 페이지를 쓰는 동료에게 보내면, 동료는 <b>설정 코드 넣기</b>만 하면 돼요.</li>
+  </ol>
+  <p>하이웍스에서도 <b>설정</b> 아이콘으로 규칙(목표 시간, 근무 인정 시작 등)을 바꿀 수 있어요. 근무 페이지 화면이 크게 바뀌어 못 읽게 되면 읽을 곳을 다시 가르쳐 주세요.</p>
+  <p>먼저 연습해 보고 싶다면 <a href="demo.html">연습용 근무 페이지</a>에서 똑같이 해 보세요. 다 해 본 뒤에는 Tampermonkey 메뉴의 "끄기"로 꺼 두세요. 이 안내 페이지와 같은 주소라서, 켜 두면 여기에도 패널이 떠요.</p>
+
+  <h2>업데이트</h2>
+  <p>Tampermonkey가 하루에 한 번쯤 새 버전을 확인해서 자동으로 받아요. 바로 받고 싶으면 Tampermonkey 아이콘 → <b>대시보드</b>에서 스크립트를 고르고 <b>업데이트 확인</b>을 누르세요.</p>
+
+  <h2>안전한가요?</h2>
+  <ul>
+    <li>근무 페이지의 화면 글자를 읽어 계산만 하고, 근무 기록은 어디에도 보내지 않아요. 모이기 방에 들어갔을 때만 방의 말이 잠긴 채로 중계 서버를 거쳐요.</li>
+    <li>하이웍스 근무 페이지와, 직접 <b>켜기</b>로 등록한 사이트에서만 동작해요. 다른 사이트에서는 Tampermonkey 메뉴만 만들고 아무것도 하지 않아요. (설치할 때 "모든 사이트" 권한이 보이는 건 어느 근무 페이지든 등록할 수 있게 하기 위해서예요.)</li>
+    <li>코드는 <a href="https://github.com/OhJaeYoung95/doodling" target="_blank" rel="noopener">GitHub 저장소</a>에 공개되어 있어요.</li>
+  </ul>
+
+  <h2>문제 해결</h2>
+  <dl>
+    <dt>패널이 안 보여요</dt>
+    <dd>근무 페이지를 새로고침하고, Tampermonkey의 <b>사용자 스크립트 허용</b>이 켜져 있는지 확인하세요.</dd>
+    <dt>패널이나 캐릭터가 두 개씩 나와요</dt>
+    <dd>예전에 폴더로 설치한 확장 프로그램이 남아 있어요. <code>chrome://extensions</code>에서 삭제하세요.</dd>
+    <dt>"화면에서 읽지 못함"이라고 나와요</dt>
+    <dd>하이웍스 화면이 바뀌어 글자를 못 읽은 경우예요. 패널의 "누락" 항목을 관리자에게 알려 주세요.</dd>
+    <dt>모이기에서 "그 코드의 방이 없어요"가 나와요</dt>
+    <dd>방장이 방을 열어 둔 상태인지, 코드 8글자가 맞는지 확인해 주세요. 방장이 새로고침하면 방이 닫혀서 새 코드가 필요해요.</dd>
+  </dl>
+
+  <footer>
+    <p class="note">하이웍스와 관계없는 개인이 만든 비공식 도구예요. 계산 결과는 참고용이니, 정확한 근무시간은 하이웍스 기록을 기준으로 해 주세요.</p>
+    <p>버전 2.0.34</p>
+  </footer>
+</main>
+</body>
+</html>
