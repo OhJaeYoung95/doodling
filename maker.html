@@ -1,0 +1,1122 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>캐릭터 만들기</title>
+<style>
+  :root {
+    --bg: #f6f5f2; --surface: #ffffff; --surface-2: #f0eee9; --text: #2b2723; --muted: #756d64;
+    --line: #e2ded6; --accent: #6b5bd6; --accent-text: #ffffff; --ok: #2f8a4c; --warn: #a86a00; --err: #c23b32;
+    --stage: #fbfaf7; --ground: #d9d3c7; --drop: #f3f1fb; color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #1c1b1a; --surface: #262523; --surface-2: #302e2b; --text: #ece8e2; --muted: #a59d93;
+      --line: #3b3935; --accent: #9d90f0; --accent-text: #1c1b1a; --ok: #6cc58a; --warn: #e0a84a; --err: #f07b72;
+      --stage: #22211f; --ground: #4a463f; --drop: #2b2838; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #1c1b1a; --surface: #262523; --surface-2: #302e2b; --text: #ece8e2; --muted: #a59d93;
+    --line: #3b3935; --accent: #9d90f0; --accent-text: #1c1b1a; --ok: #6cc58a; --warn: #e0a84a; --err: #f07b72;
+    --stage: #22211f; --ground: #4a463f; --drop: #2b2838; color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.55 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; }
+  header { padding: 18px 16px 14px; border-bottom: 1px solid var(--line); background: var(--surface); }
+  header .in { max-width: 1180px; margin: 0 auto; }
+  header h1 { font-size: 20px; margin: 0 0 4px; }
+  header p { margin: 0; color: var(--muted); font-size: 14px; }
+  .steps { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 10px; font-size: 14px; }
+  .steps b { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: var(--accent-text); font-size: 12px; margin-right: 6px; }
+  button, select, input, textarea { font: inherit; color: var(--text); }
+  button, select { background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+  button.primary { background: var(--accent); color: var(--accent-text); border-color: transparent; font-weight: 600; }
+  button[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); border-color: transparent; }
+  button:disabled { opacity: .45; cursor: default; }
+  input[type="text"], textarea { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; width: 100%; min-width: 0; }
+  textarea { font-family: Consolas, monospace; font-size: 12px; resize: vertical; }
+  main { max-width: 1180px; margin: 0 auto; padding: 16px; display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr) 380px; align-items: start; }
+  @media (max-width: 900px) { main { grid-template-columns: minmax(0, 1fr); } }
+  section { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; min-width: 0; }
+  section h2 { font-size: 16px; margin: 0 0 4px; }
+  section > .desc { color: var(--muted); font-size: 13px; margin: 0 0 12px; }
+  .col { display: grid; gap: 16px; min-width: 0; }
+  .side { position: sticky; top: 12px; }
+  @media (max-width: 900px) { .side { position: static; } }
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px 16px; }
+  .field { display: grid; gap: 4px; }
+  .field > span { font-size: 13px; color: var(--muted); }
+  .inline { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .inline input[type="range"] { flex: 1; min-width: 100px; }
+  .check { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; }
+  .check small { display: block; color: var(--muted); font-size: 12px; }
+
+  /* 상황별 그림 칸 */
+  .slot { border: 1px solid var(--line); border-radius: 10px; padding: 12px; background: var(--surface-2); display: grid; gap: 8px; }
+  .slot + .slot { margin-top: 10px; }
+  .slot-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+  .slot-head b { font-size: 15px; }
+  .slot-head small { color: var(--muted); font-size: 12px; }
+  .need { color: var(--err); font-size: 12px; font-weight: 600; }
+  .drop { border: 2px dashed var(--line); border-radius: 10px; background: var(--drop); min-height: 84px; padding: 8px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .drop.over { border-color: var(--accent); }
+  .drop .hint { color: var(--muted); font-size: 13px; padding: 0 6px; }
+  .frame { position: relative; width: 68px; height: 68px; border-radius: 8px; background: var(--stage) center bottom / contain no-repeat; border: 1px solid var(--line); }
+  .frame .no { position: absolute; left: 3px; top: 1px; font-size: 11px; color: var(--muted); }
+  .frame button { position: absolute; right: -6px; top: -6px; width: 22px; height: 22px; padding: 0; border-radius: 50%; font-size: 12px; line-height: 1; }
+  .opts { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; font-size: 13px; color: var(--muted); }
+  .opts select { padding: 3px 8px; font-size: 13px; }
+  .rig-wrap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: start; }
+  @media (max-width: 560px) { .rig-wrap { grid-template-columns: 1fr; } }
+  #rigCanvas { width: 100%; max-width: 300px; aspect-ratio: 1; background: var(--stage); border: 1px solid var(--line); border-radius: 10px; touch-action: none; cursor: crosshair; }
+  #rigParts { display: grid; gap: 6px; }
+  .rpart { display: flex; gap: 6px; align-items: center; padding: 4px 6px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); font-size: 13px; cursor: pointer; }
+  .rpart.sel { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent); }
+  .rpart i { width: 34px; height: 34px; flex: none; border-radius: 6px; background: var(--stage) center / contain no-repeat; border: 1px solid var(--line); }
+  .rpart .nm { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rpart select { padding: 2px 4px; font-size: 12px; max-width: 120px; }
+  .rpart button { padding: 2px 7px; font-size: 12px; }
+  .more { margin-top: 10px; }
+  details > summary { cursor: pointer; color: var(--accent); font-weight: 600; margin: 4px 0; }
+
+  /* 샘플 */
+  #samples { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+  .sample { display: grid; justify-items: center; gap: 2px; padding: 8px 4px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--line); cursor: pointer; }
+  .sample:hover { border-color: var(--accent); }
+  .sample i { width: 64px; height: 64px; background: var(--stage) center bottom / contain no-repeat; border-radius: 8px; }
+  .sample span { font-size: 13px; font-weight: 600; }
+
+  /* 미리 보기 */
+  #stage { position: relative; height: 200px; background: var(--stage); border-radius: 10px; overflow: hidden; border: 1px solid var(--line); }
+  #stage::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 20px; background: var(--ground); }
+  #actor { position: absolute; left: 0; bottom: 20px; }
+  #stage .empty { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: 14px; text-align: center; padding: 20px; }
+  .bubble { position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); white-space: nowrap; padding: 4px 9px; background: #fff; color: #4a3520; border: 1.5px solid #6b4a2b; border-radius: 10px; font-weight: 600; font-size: 12px; }
+  .triggers { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .triggers button { padding: 4px 10px; font-size: 13px; }
+  .msg { font-size: 13px; margin-top: 8px; }
+  .msg.err { color: var(--err); } .msg.ok { color: var(--ok); } .msg.warn { color: var(--warn); }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .note { font-size: 12px; color: var(--muted); margin: 10px 0 0; }
+
+  /* 엔진과 같은 움직임 */
+  .figure { position: relative; }
+  .jump, .sprite { width: 100%; height: 100%; }
+  .sprite { background-repeat: no-repeat; background-position: center bottom; background-size: contain; transform-origin: bottom center; }
+  .hop:not(.nobounce) .jump { animation: hop .6s cubic-bezier(.3,.7,.4,1); }
+  .party:not(.nobounce) .jump { animation: hop .6s cubic-bezier(.3,.7,.4,1) infinite; }
+  .motion-bob { animation: bob .25s ease-in-out infinite alternate; }
+  .motion-breathe { animation: breathe 1.6s ease-in-out infinite alternate; }
+  .motion-shake { animation: tremble .1s linear infinite alternate; }
+  .motion-wobble { animation: wobble .8s ease-in-out infinite alternate; }
+  @keyframes bob { from { transform: translateY(0); } to { transform: translateY(-2px); } }
+  @keyframes breathe { from { transform: translateY(0); } to { transform: translateY(1px); } }
+  @keyframes tremble { from { transform: translateX(-.7px); } to { transform: translateX(.7px); } }
+  @keyframes wobble { from { transform: rotate(-6deg); } to { transform: rotate(6deg); } }
+  @keyframes hop { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-26px); } }
+</style>
+</head>
+<body>
+<header>
+  <div class="in">
+    <h1>캐릭터 만들기</h1>
+    <p>그림을 넣어 하이웍스 화면을 돌아다닐 캐릭터를 만들고, 코드로 동료에게 보내세요. GitHub 가입은 필요 없어요.</p>
+    <div class="steps">
+      <span><b>1</b>상황별로 그림 넣기</span>
+      <span><b>2</b>오른쪽에서 움직임 확인</span>
+      <span><b>3</b>코드 복사해서 보내기</span>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="col">
+    <section>
+      <h2>샘플에서 시작하기 <small style="font-weight:400;color:var(--muted)">(선택)</small></h2>
+      <p class="desc">기본 캐릭터를 불러와 그림이나 말을 바꿔 보세요. 어떤 칸에 어떤 그림이 들어가는지 보는 예시로도 좋아요. 원래 캐릭터는 그대로 있고, 고친 캐릭터는 새 캐릭터로 추가돼요.</p>
+      <div id="samples"></div>
+    </section>
+
+    <section>
+      <h2>캐릭터 정보</h2>
+      <p class="desc">이름과 크기를 정해요. 나머지는 그대로 둬도 괜찮아요.</p>
+      <div class="grid2">
+        <label class="field"><span>이름</span><input type="text" id="label" maxlength="20" placeholder="예: 구름이"></label>
+        <div class="field"><span>크기</span><div class="inline"><input type="range" id="size" min="32" max="160" step="4" value="72"><b id="sizeV">72px</b></div></div>
+        <div class="field"><span>걷는 빠르기</span><div class="inline"><input type="range" id="speed" min="10" max="80" step="2" value="30"><b id="speedV">보통</b></div></div>
+        <div class="field"><span>그림 속 캐릭터가 바라보는 쪽</span>
+          <div class="inline" id="facing">
+            <button data-v="right" aria-pressed="true">오른쪽</button><button data-v="left">왼쪽</button><button data-v="front">정면</button>
+          </div>
+        </div>
+      </div>
+      <div class="grid2" style="margin-top:12px">
+        <label class="check"><input type="checkbox" id="bounce" checked><span>폴짝·축하할 때 통통 튀기<small>그림 자체가 뛰는 그림이면 끄세요</small></span></label>
+        <label class="check"><input type="checkbox" id="chaser"><span>가끔 다른 캐릭터 쫓아다니기<small>괴물 역할. 잡히면 상대가 도망가요</small></span></label>
+      </div>
+    </section>
+
+    <section>
+      <h2>부위로 만들기 <small style="font-weight:400;color:var(--muted)">(선택)</small></h2>
+      <p class="desc">몸·머리·팔·다리를 <b>따로 그린 PNG 여러 장</b>(모두 같은 크기 캔버스) 또는 <b>부위마다 레이어를 나눈 PSD</b>를 넣으면, 서 있기·걷기·손 흔들기·하이파이브 같은 움직임 그림을 자동으로 만들어 아래 칸에 채워요. 이름에 "다리·팔·머리·귀·꼬리"가 들어 있으면 알아서 맞춰요.</p>
+      <div class="row"><button id="rigPick">부위 PNG 고르기</button><button id="rigPsd">PSD 고르기</button><button id="rigClear" hidden>부위 비우기</button></div>
+      <div id="rigBox" hidden style="margin-top:12px">
+        <div class="rig-wrap">
+          <canvas id="rigCanvas" width="300" height="300" aria-label="부위 미리 보기"></canvas>
+          <div id="rigParts"></div>
+        </div>
+        <div class="opts" style="margin-top:10px">
+          <label>몸 틀 <select id="rigTpl"></select></label>
+          <label>미리 보기 <select id="rigPreview"></select></label>
+        </div>
+        <p class="desc" style="margin:8px 0">점(●)이 부위가 돌아가는 <b>핀</b>이에요. "핀 고치기"에서 점을 끌어 옮기세요. 다리·팔은 몸에 붙는 곳, 머리는 목에 두면 자연스러워요.</p>
+        <button class="primary" id="rigBake" style="width:100%">움직임 그림 만들기</button>
+        <div class="msg" id="rigMsg"></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>상황별 그림</h2>
+      <p class="desc">칸에 그림을 끌어다 놓거나 <b>그림 고르기</b>를 누르세요. 여러 장을 넣으면 차례로 넘어가며 움직여요. <b>서 있을 때</b> 한 칸만 채워도 돼요. 빈 칸은 비슷한 그림으로 대신 나와요.</p>
+      <div id="slots"></div>
+      <details class="more">
+        <summary>다른 상황도 그림 넣기</summary>
+        <div id="moreSlots" style="margin-top:10px"></div>
+      </details>
+    </section>
+
+    <section>
+      <h2>특별 동작 <small style="font-weight:400;color:var(--muted)">(선택)</small></h2>
+      <p class="desc">쉬는 동안 가끔 하는 이 캐릭터만의 동작이에요. 예: 커피 마시기, 춤추기</p>
+      <div id="specials"></div>
+      <div class="row"><button id="addSpecial">＋ 특별 동작 추가</button></div>
+    </section>
+
+    <section>
+      <h2>상호작용 그림 <small style="font-weight:400;color:var(--muted)">(선택)</small></h2>
+      <p class="desc">다른 캐릭터를 만나 하는 동작(하이파이브, 칼 휘두르기…)을 이 캐릭터만의 그림으로 바꿔요. 그림이 없으면 몸을 기울이고 늘이는 공통 움직임으로 해요. 칼·하트 같은 효과는 그림 위에 따로 떠요.<br><b>둘이 같이</b>: 두 아이를 한 장에 그린 그림(가로가 세로의 2배, 건 쪽이 왼쪽). 그 동작 동안 둘 대신 이 그림이 나와요.</p>
+      <div id="arts"></div>
+      <div class="row">
+        <select id="artMove" aria-label="동작"></select>
+        <select id="artKind" aria-label="그림 종류"><option value="act">이 아이 혼자</option><option value="duo">둘이 같이</option></select>
+        <button id="addArt">＋ 그림 칸 추가</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>말풍선</h2>
+      <p class="desc">비워 두면 기본 말이 나와요.</p>
+      <div class="grid2">
+        <label class="field"><span>40시간 채워서 축하할 때</span><input type="text" id="lineCelebrate" maxlength="30" placeholder="퇴근!"></label>
+        <label class="field"><span>퇴근 후 쉴 때</span><input type="text" id="lineRest" maxlength="30" placeholder="Zz"></label>
+        <label class="field"><span>다른 캐릭터를 만났을 때</span><input type="text" id="lineMeet" maxlength="30" placeholder="안녕!"></label>
+      </div>
+    </section>
+  </div>
+
+  <div class="col side">
+    <section>
+      <h2>미리 보기</h2>
+      <div id="stage"><div class="empty" id="stageEmpty">"서 있을 때" 그림을 넣으면 여기서 움직여요.</div><div id="actor" hidden></div></div>
+      <div class="triggers" id="triggers"></div>
+      <div class="msg" id="checkMsg"></div>
+    </section>
+
+    <section>
+      <h2>코드 만들기</h2>
+      <p class="desc">코드를 복사해 메신저로 보내세요. 길면 <b>파일로 저장</b>해서 파일을 보내도 돼요.</p>
+      <button class="primary" id="makeCode" style="width:100%">캐릭터 코드 만들기</button>
+      <textarea id="code" rows="4" readonly hidden style="margin-top:10px" aria-label="캐릭터 코드"></textarea>
+      <div class="row" id="codeActions" hidden><button id="copyCode">코드 복사</button><button id="saveFile">파일로 저장</button></div>
+      <button id="saveMine" class="primary" style="width:100%;margin-top:10px" hidden>내 캐릭터에 저장</button>
+      <button id="toThemes" style="width:100%;margin-top:10px">테마 만들기에 넣기 →</button>
+      <div class="msg" id="codeMsg"></div>
+      <p class="note"><b>테마 만들기에 넣기</b>를 누르면 이 캐릭터가 테마 만들기의 캐릭터 목록에 들어가요. 거기서 테마를 만들고 <b>테마 코드</b>를 하이웍스 화면 오른쪽 아래 <b>테마 → ＋ 테마 코드 넣기</b>에 넣으면 화면에 나와요. 캐릭터 코드를 받은 사람도 테마 만들기의 <b>캐릭터 코드 넣기</b>에 넣어 쓰면 돼요. 같은 캐릭터를 고쳐서 다시 보내면 받은 사람 화면에서도 새 그림으로 바뀌어요.</p>
+    </section>
+
+    <section>
+      <h2>받은 캐릭터 고치기</h2>
+      <textarea id="importCode" rows="2" placeholder="HW40C1.… 코드를 붙여 넣으세요" aria-label="불러올 코드"></textarea>
+      <div class="row"><button id="importBtn">불러오기</button><button id="importFile">파일에서 불러오기</button><button id="newChar">새로 만들기</button></div>
+      <div class="msg" id="importMsg"></div>
+      <p class="note">그림은 이 브라우저 안에서만 처리되고 어디로도 올라가지 않아요. 직접 그렸거나 써도 되는 그림만 넣어 주세요.</p>
+    </section>
+  </div>
+</main>
+
+<script src="studio/pack-rules.js"></script>
+<script src="studio/sprite.js"></script>
+<script src="studio/chars.js"></script>
+<script src="studio/samples.js"></script>
+<script src="studio/bonds.js"></script>
+<script src="studio/rig.js"></script>
+<script>
+(function () {
+  const CHARS = window.HW40_CHARS;
+  const BONDS = window.HW40_BONDS;
+  const RIG = window.HW40_RIG;
+  const isArt = (key) => /^(act|duo)_/.test(key);
+  const { createSpriteRenderer } = window.HW40_SPRITE;
+  const $ = (id) => document.getElementById(id);
+  const DRAFT_KEY = 'hw40-maker-draft';
+  const MAX_SIDE = 200; // 그림을 이 크기(px)까지 줄여 코드를 짧게 한다
+  const GIF_MAX = 300 * 1024;
+
+  const SLOTS = [
+    { key: 'idle', title: '서 있을 때', desc: '멈춰 있을 때. 꼭 필요해요', main: true },
+    { key: 'walk', title: '걸을 때', desc: '돌아다닐 때', main: true },
+    { key: 'celebrate', title: '축하할 때', desc: '금요일에 40시간을 채웠을 때', main: true },
+    { key: 'rest', title: '퇴근 후 쉴 때', desc: '퇴근한 뒤', main: true },
+    { key: 'hurry', title: '서두를 때', desc: '퇴근 1시간 전부터. 없으면 걷는 그림' },
+    { key: 'hop', title: '폴짝 뛸 때', desc: '가끔 뛰거나 놀랐을 때' },
+    { key: 'click', title: '눌렀을 때', desc: '마우스로 캐릭터를 눌렀을 때' },
+    { key: 'meet', title: '인사할 때', desc: '다른 캐릭터와 마주쳤을 때' },
+    { key: 'flee', title: '도망칠 때', desc: '괴물에게 쫓길 때' },
+    { key: 'chase', title: '쫓아갈 때', desc: '"쫓아다니기"를 켰을 때만 써요' },
+    { key: 'drag', title: '잡혀 있을 때', desc: '마우스로 끌어 들었을 때. 없으면 폴짝 그림' },
+    { key: 'fall', title: '떨어질 때', desc: '놓아서 "으아아아" 떨어질 때. 없으면 도망·서두르기 그림' },
+    { key: 'land', title: '착지할 때', desc: '바닥에 "콩" 닿을 때 한 번' },
+  ];
+  const SPEEDS = [['3', '천천히'], ['6', '보통'], ['10', '빠르게'], ['16', '아주 빠르게']];
+  const MOTIONS = [['none', '없음'], ['bob', '통통'], ['breathe', '숨쉬기'], ['shake', '덜덜'], ['wobble', '흔들흔들']];
+
+  const blank = () => ({
+    id: CHARS.newId(), label: '', size: 72, speed: 30, facing: 'right', bounce: true, chaser: false,
+    lines: { celebrate: '', rest: '', meet: '' },
+    slots: {}, // key → { frames: [dataUrl], fps, motion }
+    specials: [], // { frames, fps, motion, say, seconds, moving }
+    rig: null, // 부위로 만들기: { tpl, W, H, parts: [{ name, role, src, pivot, box }] } (이 브라우저에만 남는다)
+  });
+  let draft = blank();
+
+  // ---------- 그림 읽기 ----------
+  const readDataUrl = (file) => new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = () => reject(r.error);
+    r.readAsDataURL(file);
+  });
+  async function imageToDataUrl(file) {
+    if (!/^image\/(png|jpeg|webp|gif|bmp|svg\+xml)$/.test(file.type)) throw new Error(`"${file.name}"은 그림 파일이 아니에요. (PNG, JPG, WebP, GIF, SVG)`);
+    if (file.type === 'image/svg+xml') {
+      if (file.size > GIF_MAX) throw new Error(`"${file.name}"이 너무 커요. SVG는 300KB까지 넣을 수 있어요.`);
+      return readDataUrl(file);
+    }
+    if (file.type === 'image/gif') {
+      // 움직이는 GIF는 그대로 넣는다 (줄이면 움직임이 사라진다).
+      if (file.size > GIF_MAX) throw new Error(`"${file.name}"이 너무 커요 (${Math.round(file.size / 1024)}KB). 움직이는 GIF는 300KB까지 넣을 수 있어요.`);
+      return readDataUrl(file);
+    }
+    const src = URL.createObjectURL(file);
+    try {
+      const img = await new Promise((resolve, reject) => {
+        const i = new Image();
+        i.onload = () => resolve(i);
+        i.onerror = () => reject(new Error(`"${file.name}"을 읽지 못했어요.`));
+        i.src = src;
+      });
+      const scale = Math.min(1, MAX_SIDE / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.max(1, Math.round(img.width * scale));
+      c.height = Math.max(1, Math.round(img.height * scale));
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      const webp = c.toDataURL('image/webp', 0.9);
+      return webp.startsWith('data:image/webp') ? webp : c.toDataURL('image/png');
+    } finally {
+      URL.revokeObjectURL(src);
+    }
+  }
+  async function addFiles(target, files) {
+    const errors = [];
+    for (const f of [...files].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))) {
+      try {
+        target.frames.push(await imageToDataUrl(f));
+      } catch (e) {
+        errors.push(e.message);
+      }
+    }
+    changed();
+    if (errors.length) showCheck(errors.join(' '), 'err');
+  }
+  const pickFiles = (onFiles) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/png,image/jpeg,image/webp,image/gif,image/svg+xml';
+    input.multiple = true;
+    input.onchange = () => input.files.length && onFiles(input.files);
+    input.click();
+  };
+
+  // ---------- 그림 칸 ----------
+  const opt = (pairs, value) => pairs.map(([v, t]) => `<option value="${v}"${String(value) === v ? ' selected' : ''}>${t}</option>`).join('');
+
+  function frameBox(target, title, desc, need) {
+    const box = document.createElement('div');
+    box.className = 'slot';
+    box.innerHTML = `
+      <div class="slot-head"><span><b></b> <small></small></span>${need && !target.frames.length ? '<span class="need">필수</span>' : ''}</div>
+      <div class="drop"></div>
+      <div class="opts">
+        <button class="pick">그림 고르기</button>
+        <label>넘어가는 빠르기 <select class="fps">${opt(SPEEDS.some(([v]) => v === String(target.fps)) ? SPEEDS : [...SPEEDS, [String(target.fps), `${target.fps}장/초`]], target.fps)}</select></label>
+        <label>움직임 <select class="motion">${opt(MOTIONS, target.motion)}</select></label>
+      </div>`;
+    box.querySelector('b').textContent = title;
+    box.querySelector('small').textContent = desc;
+    const drop = box.querySelector('.drop');
+    if (!target.frames.length) drop.innerHTML = '<span class="hint">여기에 그림을 끌어다 놓으세요 (여러 장 가능)</span>';
+    target.frames.forEach((url, i) => {
+      const f = document.createElement('div');
+      f.className = 'frame';
+      f.style.backgroundImage = `url("${url}")`;
+      f.innerHTML = `<span class="no">${i + 1}</span><button title="빼기" aria-label="${i + 1}번 그림 빼기">✕</button>`;
+      f.querySelector('button').onclick = () => {
+        target.frames.splice(i, 1);
+        changed();
+      };
+      drop.appendChild(f);
+    });
+    drop.ondragover = (e) => {
+      e.preventDefault();
+      drop.classList.add('over');
+    };
+    drop.ondragleave = () => drop.classList.remove('over');
+    drop.ondrop = (e) => {
+      e.preventDefault();
+      drop.classList.remove('over');
+      addFiles(target, e.dataTransfer.files);
+    };
+    box.querySelector('.pick').onclick = () => pickFiles((files) => addFiles(target, files));
+    box.querySelector('.fps').onchange = (e) => {
+      target.fps = Number(e.target.value);
+      changed(false);
+    };
+    box.querySelector('.motion').onchange = (e) => {
+      target.motion = e.target.value;
+      changed(false);
+    };
+    return box;
+  }
+
+  const slotOf = (key) => (draft.slots[key] = draft.slots[key] || { frames: [], fps: 6, motion: key === 'idle' ? 'breathe' : key === 'walk' ? 'bob' : 'none' });
+
+  function renderSlots() {
+    $('slots').replaceChildren(...SLOTS.filter((s) => s.main).map((s) => frameBox(slotOf(s.key), s.title, s.desc, s.key === 'idle')));
+    $('moreSlots').replaceChildren(...SLOTS.filter((s) => !s.main && (s.key !== 'chase' || draft.chaser)).map((s) => frameBox(slotOf(s.key), s.title, s.desc)));
+    $('specials').replaceChildren(
+      ...draft.specials.map((sp, i) => {
+        const box = frameBox(sp, `특별 동작 ${i + 1}`, '쉬는 중 가끔', false);
+        const extra = document.createElement('div');
+        extra.className = 'opts';
+        extra.innerHTML = `
+          <label style="flex:1;min-width:160px">말풍선 <input type="text" class="say" maxlength="30" placeholder="예: 커피 한 잔~"></label>
+          <label>길이 <select class="sec">${opt([...new Set([2, 3, 5, 8, sp.seconds])].sort((a, b) => a - b).map((n) => [String(n), `${n}초`]), sp.seconds)}</select></label>
+          <label><input type="checkbox" class="moving"${sp.moving ? ' checked' : ''}> 하면서 달리기</label>
+          <button class="del">이 동작 빼기</button>`;
+        const say = extra.querySelector('.say');
+        say.value = sp.say || '';
+        say.oninput = () => {
+          sp.say = say.value;
+          changed(false);
+        };
+        extra.querySelector('.sec').onchange = (e) => {
+          sp.seconds = Number(e.target.value);
+          changed(false);
+        };
+        extra.querySelector('.moving').onchange = (e) => {
+          sp.moving = e.target.checked;
+          changed(false);
+        };
+        extra.querySelector('.del').onclick = () => {
+          draft.specials.splice(i, 1);
+          changed();
+        };
+        box.appendChild(extra);
+        return box;
+      })
+    );
+    renderArts();
+  }
+  // ---------- 상호작용 그림 ----------
+  const moveName = (move) => {
+    const mv = BONDS.MOVES[move];
+    return mv ? `${mv.icon} ${mv.label}` : move;
+  };
+  function renderArts() {
+    const keys = Object.keys(draft.slots).filter(isArt);
+    $('arts').replaceChildren(...keys.map((key) => {
+      const [, kind, move] = /^(act|duo)_(.+)$/.exec(key);
+      const s = draft.slots[key];
+      const box = frameBox(s, `${moveName(move)}${kind === 'duo' ? ' · 둘이 같이' : ''}`, kind === 'duo' ? '두 아이를 한 장에 (가로 2배, 건 쪽이 왼쪽)' : '이 동작을 할 때 이 그림', false);
+      const extra = document.createElement('div');
+      extra.className = 'opts';
+      extra.innerHTML = `${kind === 'act' ? `<label title="켜면 엔진은 자리만 옮기고 기울이거나 뒤집지 않아요"><input type="checkbox" class="still"${s.still ? ' checked' : ''}> 그림에 몸 움직임까지 담겨 있어요</label>` : ''}
+        <label><input type="checkbox" class="once"${s.loop === false ? ' checked' : ''}> 한 번만 넘기고 끝 장에서 멈추기</label>
+        <button class="del">이 칸 빼기</button>`;
+      const still = extra.querySelector('.still');
+      if (still) still.onchange = () => { s.still = still.checked; changed(false); };
+      extra.querySelector('.once').onchange = (e) => { s.loop = e.target.checked ? false : undefined; changed(false); };
+      extra.querySelector('.del').onclick = () => { delete draft.slots[key]; changed(); };
+      box.appendChild(extra);
+      return box;
+    }));
+    const kind = $('artKind').value;
+    const keep = $('artMove').value;
+    $('artMove').innerHTML = Object.keys(BONDS.MOVES).filter((m) => !draft.slots[`${kind}_${m}`]).map((m) => `<option value="${m}">${moveName(m)}</option>`).join('');
+    if (keep && !draft.slots[`${kind}_${keep}`]) $('artMove').value = keep;
+  }
+  $('artKind').onchange = () => renderArts();
+  $('addArt').onclick = () => {
+    const move = $('artMove').value;
+    if (!move) return;
+    draft.slots[`${$('artKind').value}_${move}`] = { frames: [], fps: 8, motion: 'none', loop: false };
+    changed();
+  };
+
+  $('addSpecial').onclick = () => {
+    draft.specials.push({ frames: [], fps: 6, motion: 'none', say: '', seconds: 3, moving: false });
+    changed();
+  };
+
+  // ---------- 부위로 만들기 ----------
+  // 부위 그림은 이 크기(px)까지 줄여 보관한다. 구운 그림은 캐릭터 코드에 들어가고, 부위 원본은 이 브라우저에만 남는다.
+  const RIG_SIDE = 360;
+  const imgCache = new Map();
+  const loadImg = (src) => {
+    if (!imgCache.has(src)) imgCache.set(src, new Promise((resolve, reject) => {
+      const i = new Image();
+      i.onload = () => resolve(i);
+      i.onerror = () => reject(new Error('부위 그림을 읽지 못했어요.'));
+      i.src = src;
+    }));
+    return imgCache.get(src);
+  };
+  const newCanvas = (w, h) => {
+    const c = document.createElement('canvas');
+    c.width = w;
+    c.height = h;
+    return c;
+  };
+  const canvasUrl = (c, q = 0.9) => {
+    const webp = c.toDataURL('image/webp', q);
+    return webp.startsWith('data:image/webp') ? webp : c.toDataURL('image/png');
+  };
+  const rigMsg = (text, kind) => {
+    $('rigMsg').className = `msg ${kind || ''}`;
+    $('rigMsg').textContent = text;
+  };
+
+  // 같은 크기(width×height)의 레이어 캔버스들로 부위를 만든다. 뒤 → 앞 순서.
+  function rigFromLayers(width, height, layers) {
+    const scale = Math.min(1, RIG_SIDE / Math.max(width, height));
+    const W = Math.max(1, Math.round(width * scale));
+    const H = Math.max(1, Math.round(height * scale));
+    const parts = [];
+    for (const L of layers) {
+      const c = newCanvas(W, H);
+      const ctx = c.getContext('2d');
+      ctx.drawImage(L.canvas, 0, 0, W, H);
+      const box = RIG.alphaBox(ctx.getImageData(0, 0, W, H).data, W, H);
+      if (!box) continue; // 빈 레이어
+      parts.push({ name: String(L.name).slice(0, 30), role: RIG.guessRole(L.name), src: c.toDataURL('image/png'), box });
+    }
+    if (!parts.length) throw new Error('그려진 부위가 없어요.');
+    // 몸 가운데: 몸·머리가 있으면 그 둘, 없으면 전체의 가운데
+    const core = parts.filter((p) => p.role === 'body' || p.role === 'head');
+    const pool = core.length ? core : parts;
+    const x0 = Math.min(...pool.map((p) => p.box.x0));
+    const x1 = Math.max(...pool.map((p) => p.box.x1));
+    const y0 = Math.min(...pool.map((p) => p.box.y0));
+    const y1 = Math.max(...pool.map((p) => p.box.y1));
+    const center = [(x0 + x1) / 2, (y0 + y1) / 2];
+    for (const p of parts) p.pivot = RIG.autoPivot(p.role, p.box, center).map((v) => Math.round(v));
+    const roles = new Set(parts.map((p) => p.role));
+    const tpl = roles.has('arm-front') ? 'biped' : roles.has('leg-front') || roles.has('leg-back') ? 'round' : 'float';
+    return { tpl, W, H, parts };
+  }
+
+  function setRig(rig, note) {
+    draft.rig = rig;
+    rigSel = 0;
+    renderRig();
+    changed(false);
+    if (rig) {
+      const named = rig.parts.filter((p) => p.role !== 'deco').length;
+      rigMsg(`부위 ${rig.parts.length}개를 넣었어요${note || ''}. 이름으로 ${named}개의 역할을 맞췄어요. 역할과 핀을 확인한 뒤 "움직임 그림 만들기"를 누르세요.`, 'ok');
+    }
+  }
+
+  $('rigPick').onclick = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/png,image/webp';
+    input.multiple = true;
+    input.onchange = async () => {
+      try {
+        const files = [...input.files].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+        if (files.length < 2) throw new Error('부위 그림을 두 장 이상 골라 주세요 (몸, 다리처럼).');
+        const imgs = [];
+        for (const f of files) {
+          const url = URL.createObjectURL(f);
+          try {
+            imgs.push({ name: f.name.replace(/\.[^.]+$/, ''), img: await loadImg(url) });
+          } finally {
+            imgCache.delete(url);
+            URL.revokeObjectURL(url);
+          }
+        }
+        const { width, height } = imgs[0].img;
+        const odd = imgs.filter((x) => x.img.width !== width || x.img.height !== height);
+        if (odd.length) throw new Error(`부위 그림은 모두 같은 크기여야 해요. "${odd[0].name}"이(가) ${width}×${height}가 아니에요. 같은 캔버스에서 부위마다 따로 내보내 주세요.`);
+        setRig(rigFromLayers(width, height, imgs.map((x) => ({ name: x.name, canvas: x.img }))));
+      } catch (e) {
+        rigMsg(e.message, 'err');
+      }
+    };
+    input.click();
+  };
+
+  $('rigPsd').onclick = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.psd,image/vnd.adobe.photoshop';
+    input.onchange = async () => {
+      const f = input.files[0];
+      if (!f) return;
+      try {
+        if (f.size > 60 * 1024 * 1024) throw new Error('PSD가 너무 커요 (60MB까지).');
+        const psd = RIG.parsePsd(await f.arrayBuffer());
+        const layers = psd.layers.map((L) => {
+          const tmp = newCanvas(L.width, L.height);
+          tmp.getContext('2d').putImageData(new ImageData(L.rgba, L.width, L.height), 0, 0);
+          const c = newCanvas(psd.width, psd.height);
+          c.getContext('2d').drawImage(tmp, L.left, L.top);
+          return { name: L.name, canvas: c };
+        });
+        setRig(rigFromLayers(psd.width, psd.height, layers), ' (PSD 레이어)');
+      } catch (e) {
+        rigMsg(e.message, 'err');
+      }
+    };
+    input.click();
+  };
+  $('rigClear').onclick = () => {
+    if (!window.confirm('넣은 부위를 비울까요? 이미 만든 움직임 그림은 그대로 남아요.')) return;
+    setRig(null);
+    rigMsg('');
+  };
+
+  let rigSel = 0;
+  let rigImgs = [];
+  async function renderRig() {
+    const rig = draft.rig;
+    $('rigBox').hidden = $('rigClear').hidden = !rig;
+    if (!rig) return;
+    $('rigTpl').innerHTML = opt(Object.entries(RIG.TEMPLATES).map(([k, t]) => [k, t.label]), rig.tpl);
+    if (!$('rigPreview').options.length) {
+      const seen = new Set();
+      $('rigPreview').innerHTML = '<option value="pins">핀 고치기 (멈춤)</option>' + RIG.BAKE.filter((b) => !seen.has(b.pose) && seen.add(b.pose)).map((b) => `<option value="${b.key}">${b.label}</option>`).join('');
+    }
+    $('rigParts').replaceChildren(...rig.parts.map((p, i) => {
+      const row = document.createElement('div');
+      row.className = `rpart${i === rigSel ? ' sel' : ''}`;
+      row.innerHTML = `<i></i><span class="nm"></span><select aria-label="역할">${opt(RIG.ROLES, p.role)}</select><button class="up" title="뒤로 (더 뒤에 그리기)" aria-label="뒤로">↑</button><button class="dn" title="앞으로 (더 앞에 그리기)" aria-label="앞으로">↓</button><button class="x" title="이 부위 빼기" aria-label="빼기">✕</button>`;
+      row.querySelector('i').style.backgroundImage = `url("${p.src}")`;
+      row.querySelector('.nm').textContent = p.name;
+      row.querySelector('.nm').title = p.name;
+      row.onclick = (e) => {
+        if (e.target.closest('select,button')) return;
+        rigSel = i;
+        renderRig();
+      };
+      row.querySelector('select').onchange = (e) => {
+        p.role = e.target.value;
+        rigSel = i;
+        changed(false);
+        renderRig();
+      };
+      const move = (d) => {
+        const j = i + d;
+        if (j < 0 || j >= rig.parts.length) return;
+        [rig.parts[i], rig.parts[j]] = [rig.parts[j], rig.parts[i]];
+        rigSel = j;
+        changed(false);
+        renderRig();
+      };
+      row.querySelector('.up').onclick = () => move(-1);
+      row.querySelector('.dn').onclick = () => move(1);
+      row.querySelector('.x').onclick = () => {
+        rig.parts.splice(i, 1);
+        if (!rig.parts.length) return setRig(null);
+        rigSel = Math.min(rigSel, rig.parts.length - 1);
+        changed(false);
+        renderRig();
+      };
+      return row;
+    }));
+    try {
+      rigImgs = await Promise.all(rig.parts.map((p) => loadImg(p.src)));
+    } catch (e) {
+      rigMsg(e.message, 'err');
+    }
+  }
+  $('rigTpl').onchange = () => {
+    if (!draft.rig) return;
+    draft.rig.tpl = $('rigTpl').value;
+    changed(false);
+  };
+
+  // 미리 보기 캔버스: 그림 좌표 ↔ 캔버스 좌표
+  const rigView = () => {
+    const rig = draft.rig;
+    const c = $('rigCanvas');
+    const cw = rig.W * (1 + RIG.PAD.side * 2);
+    const ch = rig.H * (1 + RIG.PAD.top);
+    const scale = Math.min(c.width / cw, c.height / ch);
+    return { c, scale, dx: (c.width - cw * scale) / 2, dy: c.height - ch * scale, ox: rig.W * RIG.PAD.side, oy: rig.H * RIG.PAD.top };
+  };
+  function drawRig(now) {
+    const rig = draft.rig;
+    if (!rig || $('rigBox').hidden || rigImgs.length !== rig.parts.length) return;
+    const v = rigView();
+    const ctx = v.c.getContext('2d');
+    ctx.clearRect(0, 0, v.c.width, v.c.height);
+    const mode = $('rigPreview').value || 'pins';
+    const b = RIG.BAKE.find((x) => x.key === mode);
+    const t = b ? ((now / 1000) * b.fps / b.n) % 1 : 0;
+    ctx.save();
+    ctx.translate(v.dx, v.dy);
+    RIG.drawPose(ctx, rigImgs, rig.parts, b ? b.pose : 'still', t, { W: rig.W, H: rig.H, scale: v.scale, tpl: RIG.TEMPLATES[rig.tpl] || RIG.TEMPLATES.round, mirror: draft.facing === 'left' ? -1 : 1 });
+    if (!b) {
+      rig.parts.forEach((p, i) => {
+        const x = (v.ox + p.pivot[0]) * v.scale;
+        const y = (v.oy + p.pivot[1]) * v.scale;
+        ctx.beginPath();
+        ctx.arc(x, y, i === rigSel ? 7 : 4, 0, Math.PI * 2);
+        ctx.fillStyle = i === rigSel ? '#e0577a' : 'rgba(60,50,40,.55)';
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.fill();
+        ctx.stroke();
+      });
+    }
+    ctx.restore();
+  }
+  // 핀 끌기: 고른 부위의 핀을 옮긴다. 다른 핀 가까이 누르면 그 부위를 고른다.
+  {
+    const c = $('rigCanvas');
+    let dragging = false;
+    const at = (e) => {
+      const v = rigView();
+      const r = c.getBoundingClientRect();
+      const cx = ((e.clientX - r.left) / r.width) * c.width - v.dx;
+      const cy = ((e.clientY - r.top) / r.height) * c.height - v.dy;
+      return { v, cx, cy, px: cx / v.scale - v.ox, py: cy / v.scale - v.oy };
+    };
+    c.addEventListener('pointerdown', (e) => {
+      const rig = draft.rig;
+      if (!rig) return;
+      if ($('rigPreview').value !== 'pins') {
+        $('rigPreview').value = 'pins';
+        return;
+      }
+      const { v, cx, cy } = at(e);
+      let best = -1;
+      let bestD = 14 * 14;
+      rig.parts.forEach((p, i) => {
+        const d = ((v.ox + p.pivot[0]) * v.scale - cx) ** 2 + ((v.oy + p.pivot[1]) * v.scale - cy) ** 2;
+        if (d < bestD || (i === rigSel && d < 20 * 20)) { best = i; bestD = d; }
+      });
+      if (best >= 0 && best !== rigSel) {
+        rigSel = best;
+        renderRig();
+      }
+      dragging = true;
+      c.setPointerCapture(e.pointerId);
+      const { px, py } = at(e);
+      rig.parts[rigSel].pivot = [Math.round(px), Math.round(py)];
+    });
+    c.addEventListener('pointermove', (e) => {
+      if (!dragging || !draft.rig) return;
+      const { px, py } = at(e);
+      const rig = draft.rig;
+      rig.parts[rigSel].pivot = [Math.round(Math.min(Math.max(px, -rig.W * 0.1), rig.W * 1.1)), Math.round(Math.min(Math.max(py, -rig.H * 0.1), rig.H * 1.05))];
+    });
+    const stop = () => {
+      if (!dragging) return;
+      dragging = false;
+      changed(false);
+    };
+    c.addEventListener('pointerup', stop);
+    c.addEventListener('pointercancel', stop);
+  }
+
+  $('rigBake').onclick = async () => {
+    const rig = draft.rig;
+    if (!rig) return;
+    const keys = RIG.BAKE.map((b) => b.key);
+    const filled = keys.filter((k) => draft.slots[k] && draft.slots[k].frames.length);
+    if (filled.length && !window.confirm(`이미 그림이 있는 칸 ${filled.length}개(서 있을 때 등)를 부위로 만든 그림으로 바꿀까요?`)) return;
+    $('rigBake').disabled = true;
+    rigMsg('그리는 중…');
+    try {
+      const imgs = await Promise.all(rig.parts.map((p) => loadImg(p.src)));
+      const out = RIG.bakeAll(rig, imgs, { facing: draft.facing, makeCanvas: newCanvas, toUrl: (c) => canvasUrl(c, 0.85) });
+      for (const [k, v] of Object.entries(out)) draft.slots[k] = v;
+      changed();
+      const kb = Math.round(JSON.stringify(out).length / 1024);
+      rigMsg(`움직임 그림 ${Object.keys(out).length}가지를 만들었어요 (약 ${kb}KB). 오른쪽 미리 보기 단추로 확인하고, 마음에 안 들면 핀을 옮겨 다시 만드세요. 상호작용 그림 칸에도 손 흔들기·하이파이브 같은 그림이 들어갔어요.`, 'ok');
+    } catch (e) {
+      rigMsg(`만들지 못했어요: ${e.message}`, 'err');
+    } finally {
+      $('rigBake').disabled = false;
+    }
+  };
+
+  // ---------- 정보 입력 ----------
+  const speedName = (v) => (v < 22 ? '느릿느릿' : v < 40 ? '보통' : v < 60 ? '빠르게' : '아주 빠르게');
+  function renderInfo() {
+    $('label').value = draft.label;
+    $('size').value = draft.size;
+    $('sizeV').textContent = `${draft.size}px`;
+    $('speed').value = draft.speed;
+    $('speedV').textContent = speedName(draft.speed);
+    for (const b of document.querySelectorAll('#facing button')) b.setAttribute('aria-pressed', String(b.dataset.v === draft.facing));
+    $('bounce').checked = draft.bounce;
+    $('chaser').checked = draft.chaser;
+    $('lineCelebrate').value = draft.lines.celebrate;
+    $('lineRest').value = draft.lines.rest;
+    $('lineMeet').value = draft.lines.meet;
+    renderRig();
+  }
+  $('label').oninput = () => { draft.label = $('label').value; changed(false); };
+  $('size').oninput = () => { draft.size = Number($('size').value); $('sizeV').textContent = `${draft.size}px`; changed(false); };
+  $('speed').oninput = () => { draft.speed = Number($('speed').value); $('speedV').textContent = speedName(draft.speed); changed(false); };
+  for (const b of document.querySelectorAll('#facing button')) {
+    b.onclick = () => { draft.facing = b.dataset.v; renderInfo(); changed(false); };
+  }
+  $('bounce').onchange = () => { draft.bounce = $('bounce').checked; changed(false); };
+  $('chaser').onchange = () => { draft.chaser = $('chaser').checked; changed(); };
+  for (const [id, key] of [['lineCelebrate', 'celebrate'], ['lineRest', 'rest'], ['lineMeet', 'meet']]) {
+    $(id).oninput = () => { draft.lines[key] = $(id).value; changed(false); };
+  }
+
+  // ---------- 캐릭터 설정으로 바꾸기 ----------
+  function toSpec() {
+    const animations = {};
+    for (const [key, s] of Object.entries(draft.slots)) {
+      if (!s.frames.length || (key === 'chase' && !draft.chaser)) continue;
+      animations[key] = { frames: s.frames, fps: s.fps, motion: s.motion, ...(s.loop === false ? { loop: false } : {}), ...(s.still ? { still: true } : {}) };
+    }
+    draft.specials.forEach((sp, i) => {
+      if (!sp.frames.length) return;
+      animations[`sp${i + 1}`] = { frames: sp.frames, fps: sp.fps, motion: sp.motion, special: true, duration: sp.seconds * 1000, say: sp.say || '', sayAt: sp.sayAt === undefined ? 300 : Math.min(sp.sayAt, sp.seconds * 1000 - 500), moving: sp.moving };
+    });
+    const lines = {};
+    if (draft.lines.celebrate) lines.celebrate = draft.lines.celebrate;
+    if (draft.lines.rest) lines.rest = draft.lines.rest;
+    // 샘플에서 온 "상대별 인사"는 그대로 두고, 화면에서 적은 인사는 모든 상대에게 쓴다.
+    lines.meet = { ...(draft.meetOthers || {}), ...(draft.lines.meet ? { default: draft.lines.meet } : {}) };
+    return {
+      id: draft.id, label: draft.label.trim() || '내 캐릭터', size: draft.size, speed: draft.speed,
+      facing: draft.facing, bounce: draft.bounce, chaser: draft.chaser, lines, animations,
+    };
+  }
+
+  // 받은 코드의 설정을 화면 입력으로 되돌린다.
+  function fromSpec(spec) {
+    const d = blank();
+    d.id = spec.id;
+    d.label = spec.label || '';
+    d.size = spec.size || 72;
+    d.speed = spec.speed || 30;
+    d.facing = spec.facing || 'right';
+    d.bounce = spec.bounce !== false;
+    d.chaser = Boolean(spec.chaser);
+    const lines = spec.lines || {};
+    d.lines = { celebrate: lines.celebrate || '', rest: lines.rest || '', meet: (lines.meet && lines.meet.default) || '' };
+    d.meetOthers = {};
+    for (const [k, v] of Object.entries(lines.meet || {})) if (k !== 'default' && typeof v === 'string') d.meetOthers[k] = v;
+    for (const [name, a] of Object.entries(spec.animations || {})) {
+      if (!Array.isArray(a.frames)) continue; // 시트 그림은 이 화면에서 고칠 수 없다
+      const base = { frames: [...a.frames], fps: a.fps || 6, motion: a.motion || 'none', ...(a.loop === false ? { loop: false } : {}), ...(a.still ? { still: true } : {}) };
+      if (a.special) d.specials.push({ ...base, say: a.say || '', seconds: Math.max(1, Math.round((a.duration || 3000) / 1000)), sayAt: a.sayAt, moving: Boolean(a.moving) });
+      else d.slots[name] = base;
+    }
+    return d;
+  }
+
+  // ---------- 확인과 미리 보기 ----------
+  function showCheck(text, kind) {
+    $('checkMsg').className = `msg ${kind || ''}`;
+    $('checkMsg').textContent = text;
+  }
+
+  let pack = null;
+  let saveTimer = 0;
+  function changed(rerender = true) {
+    if (rerender) renderSlots();
+    $('code').hidden = $('codeActions').hidden = true;
+    $('codeMsg').textContent = '';
+    try {
+      pack = CHARS.normalizeCharacter(toSpec());
+      const kb = Math.round(JSON.stringify(toSpec()).length / 1024);
+      showCheck(`준비됐어요 · 크기 약 ${kb}KB`, 'ok');
+    } catch (e) {
+      pack = null;
+      const missingIdle = !(draft.slots.idle && draft.slots.idle.frames.length);
+      showCheck(missingIdle ? '"서 있을 때" 그림을 넣어 주세요.' : e.message, missingIdle ? 'warn' : 'err');
+    }
+    $('makeCode').disabled = !pack;
+    $('toThemes').disabled = !pack;
+    setupStage();
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      try {
+        localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+      } catch {
+        // 저장 공간이 모자라면 임시 저장만 건너뛴다.
+      }
+    }, 500);
+  }
+
+  const TRIGGER_LABEL = { idle: '서 있기', walk: '걷기', celebrate: '축하', rest: '퇴근 후', hurry: '서두르기', hop: '폴짝', click: '누르기', meet: '인사', flee: '도망', chase: '쫓기', drag: '잡히기', fall: '떨어지기', land: '착지' };
+  const MOVING = { walk: 1, hurry: 2.7, flee: 2.7, chase: 2 };
+  let stage = null;
+
+  function setupStage() {
+    const actor = $('actor');
+    $('stageEmpty').hidden = Boolean(pack);
+    actor.hidden = !pack;
+    $('triggers').replaceChildren();
+    if (!pack) {
+      stage = null;
+      return;
+    }
+    const keep = stage ? { x: stage.x, dir: stage.dir, state: stage.base } : { x: 30, dir: 1, state: 'walk' };
+    actor.innerHTML = '<div class="bubble" hidden></div><div class="figure"><div class="jump"><div class="sprite"></div></div></div>';
+    const fig = actor.querySelector('.figure');
+    fig.style.width = fig.style.height = `${pack.size}px`;
+    fig.classList.toggle('nobounce', !pack.bounce);
+    stage = { fig, bubble: actor.querySelector('.bubble'), render: createSpriteRenderer(pack, actor.querySelector('.sprite')),
+      x: keep.x, dir: keep.dir, state: keep.state, base: keep.state, until: 0, sayUntil: 0 };
+    const specials = Object.keys(pack.animations).filter((n) => pack.animations[n].special || isArt(n));
+    const names = ['idle', 'walk', 'celebrate', 'rest', 'hurry', 'hop', 'click', 'meet', 'flee', ...(pack.chaser ? ['chase'] : []), 'drag', 'fall', 'land'];
+    for (const n of [...names, ...specials]) {
+      const b = document.createElement('button');
+      b.dataset.trigger = n;
+      b.textContent = TRIGGER_LABEL[n] || (isArt(n) ? `🎬 ${moveName(n.replace(/^(act|duo)_/, ''))}${n.startsWith('duo_') ? '(둘)' : ''}` : `★ 특별 동작 ${n.slice(2)}`);
+      b.onclick = () => trigger(n);
+      $('triggers').appendChild(b);
+    }
+    trigger(stage.base);
+  }
+
+  function say(text, ms) {
+    if (!text) return;
+    stage.bubble.textContent = text;
+    stage.bubble.hidden = false;
+    stage.sayUntil = performance.now() + ms;
+  }
+
+  function trigger(name) {
+    if (!stage) return;
+    const now = performance.now();
+    const special = pack.animations[name] && pack.animations[name].special;
+    stage.bubble.hidden = true;
+    stage.sayUntil = 0;
+    if (isArt(name)) {
+      const mv = BONDS.MOVES[name.replace(/^(act|duo)_/, '')];
+      stage.state = name;
+      stage.until = now + Math.max(800, mv ? mv.ms : 1000);
+    } else if (name === 'hop' || name === 'click' || name === 'land') {
+      stage.state = name;
+      stage.until = now + 600;
+      stage.fig.classList.add('hop');
+      setTimeout(() => stage && stage.fig.classList.remove('hop'), 600);
+      if (name === 'click') say('3시간 12분 남았어', 2000);
+      if (name === 'land') say('콩!', 1200);
+    } else if (special) {
+      stage.state = name;
+      stage.until = now + special.ms;
+      setTimeout(() => { if (stage && stage.state === name) say(special.text, special.ms - special.sayAt); }, special.sayAt);
+    } else {
+      stage.state = stage.base = name;
+      stage.until = 0;
+      const lines = { celebrate: pack.lines.celebrate, rest: pack.lines.rest, flee: '으악!', chase: '어흥!', meet: pack.lines.meet.default || '안녕!', drag: '어어?!', fall: '으아아아!' };
+      if (lines[name]) say(lines[name], name === 'celebrate' || name === 'rest' ? 1e9 : 2000);
+    }
+    stage.fig.classList.toggle('party', stage.state === 'celebrate');
+    for (const b of document.querySelectorAll('#triggers button')) b.setAttribute('aria-pressed', String(b.dataset.trigger === name));
+  }
+
+  let last = performance.now();
+  function frame(now) {
+    const dt = Math.min((now - last) / 1000, 0.1);
+    last = now;
+    drawRig(now);
+    if (stage && pack) {
+      if (stage.until && now > stage.until) {
+        stage.until = 0;
+        trigger(stage.base);
+      }
+      if (stage.sayUntil && now > stage.sayUntil) stage.bubble.hidden = true;
+      const special = pack.animations[stage.state] && pack.animations[stage.state].special;
+      const factor = MOVING[stage.state] || (special && special.moving ? 2.7 : 0);
+      if (factor) {
+        const max = Math.max(0, $('stage').clientWidth - pack.size);
+        stage.x += stage.dir * pack.speed * factor * dt;
+        if (stage.x <= 0) { stage.x = 0; stage.dir = 1; }
+        if (stage.x >= max) { stage.x = max; stage.dir = -1; }
+      }
+      $('actor').style.transform = `translateX(${stage.x}px)`;
+      stage.fig.style.transform = `scaleX(${stage.render(stage.state, now, stage.dir)})`;
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  // ---------- 코드 ----------
+  const fileName = () => `${(draft.label.trim() || '내 캐릭터').replace(/[\\/:*?"<>|]/g, '')}-캐릭터코드.txt`;
+  $('makeCode').onclick = async () => {
+    if (!pack) return;
+    try {
+      const code = await CHARS.encodeCharacter(toSpec());
+      $('code').value = code;
+      $('code').hidden = $('codeActions').hidden = false;
+      $('codeMsg').className = 'msg ok';
+      $('codeMsg').textContent = `코드를 만들었어요 (${Math.round(code.length / 1024)}KB).${code.length > 60000 ? ' 메신저에 안 들어가면 파일로 저장해서 보내 주세요.' : ''}`;
+    } catch (e) {
+      $('codeMsg').className = 'msg err';
+      $('codeMsg').textContent = `코드를 만들지 못했어요: ${e.message}`;
+    }
+  };
+  $('copyCode').onclick = async () => {
+    try {
+      await navigator.clipboard.writeText($('code').value);
+      $('copyCode').textContent = '복사했어요';
+      setTimeout(() => { $('copyCode').textContent = '코드 복사'; }, 1500);
+    } catch {
+      $('code').select();
+    }
+  };
+  $('saveFile').onclick = () => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([$('code').value], { type: 'text/plain' }));
+    a.download = fileName();
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  };
+
+  // 하이웍스 화면 위 팝업(창 안의 창)으로 열렸을 때: 만든 캐릭터를 바깥 화면의 내 캐릭터 목록에 바로 저장한다.
+  const embedded = window.parent !== window && new URLSearchParams(location.search).has('embed');
+  let saveId = 0;
+  if (embedded) {
+    $('saveMine').hidden = false;
+    window.parent.postMessage({ type: 'hw40-embed-hello', title: '🧸 캐릭터 만들기' }, '*');
+    window.addEventListener('message', (e) => {
+      if (e.source !== window.parent || !e.data || e.data.type !== 'hw40-char-saved' || e.data.id !== saveId) return;
+      $('codeMsg').className = `msg ${e.data.ok ? 'ok' : 'err'}`;
+      $('codeMsg').textContent = e.data.ok
+        ? `"${e.data.name}"을(를) 내 캐릭터에 ${e.data.replaced ? '바꿔 ' : ''}저장했어요. 테마에 넣어 쓰거나 모이기 방에 데려갈 수 있어요.`
+        : `저장하지 못했어요: ${e.data.error || '알 수 없는 문제'}`;
+    });
+    $('saveMine').onclick = () => {
+      const code = $('code').value;
+      if (!pack || !code) {
+        $('codeMsg').className = 'msg err';
+        $('codeMsg').textContent = '아직 코드가 없어요. 그림을 넣고 이름을 정해 주세요.';
+        return;
+      }
+      saveId += 1;
+      window.parent.postMessage({ type: 'hw40-save-char', code, id: saveId }, '*');
+    };
+  }
+
+  // 같은 사이트의 테마 만들기 화면이 읽는 내 캐릭터 목록에 바로 넣는다.
+  $('toThemes').onclick = () => {
+    if (!pack) return;
+    try {
+      const saved = JSON.parse(localStorage.getItem('hw40-my-chars') || '[]');
+      const spec = toSpec();
+      const list = (Array.isArray(saved) ? saved : []).filter((c) => c && c.id !== spec.id);
+      localStorage.setItem('hw40-my-chars', JSON.stringify([...list, spec]));
+      $('codeMsg').className = 'msg ok';
+      $('codeMsg').textContent = `"${spec.label}"을(를) 테마 만들기에 넣었어요.`;
+      if (embedded) location.href = 'themes.html?embed=1';
+      else window.open('themes.html', 'hw40-themes');
+    } catch {
+      $('codeMsg').className = 'msg err';
+      $('codeMsg').textContent = '브라우저 저장 공간이 모자라 넣지 못했어요. 테마 만들기에서 안 쓰는 캐릭터를 지워 주세요.';
+    }
+  };
+
+  async function importCode(text) {
+    const msg = $('importMsg');
+    try {
+      const spec = await CHARS.decodeCharacter(text);
+      CHARS.normalizeCharacter(spec);
+      draft = fromSpec(spec);
+      renderInfo();
+      changed();
+      msg.className = 'msg ok';
+      msg.textContent = `"${spec.label}" 캐릭터를 불러왔어요. 고친 뒤 코드를 다시 만들어 보내면 받은 사람 화면에서도 바뀌어요.`;
+    } catch (e) {
+      msg.className = 'msg err';
+      msg.textContent = e.message;
+    }
+  }
+  $('importBtn').onclick = () => importCode($('importCode').value);
+  $('importFile').onclick = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.txt,text/plain';
+    input.onchange = async () => input.files[0] && importCode(await input.files[0].text());
+    input.click();
+  };
+  $('newChar').onclick = () => {
+    if (!window.confirm('지금 만들던 캐릭터를 지우고 새로 만들까요?')) return;
+    draft = blank();
+    renderInfo();
+    changed();
+  };
+
+  // ---------- 샘플 ----------
+  // 기본 캐릭터를 새 캐릭터(새 id)로 불러온다. 원래 캐릭터는 그대로 남는다.
+  const hasWork = () => Object.values(draft.slots).some((s) => s.frames.length) || draft.specials.length;
+  for (const sample of window.HW40_SAMPLES || []) {
+    const b = document.createElement('button');
+    b.className = 'sample';
+    b.title = `${sample.label} 불러와서 고치기`;
+    b.innerHTML = '<i></i><span></span>';
+    const idle = sample.animations.idle;
+    b.querySelector('i').style.backgroundImage = `url("${idle.frames ? idle.frames[0] : idle.sheet}")`;
+    b.querySelector('span').textContent = sample.label;
+    b.onclick = () => {
+      if (hasWork() && !window.confirm(`지금 만들던 캐릭터 대신 "${sample.label}" 샘플을 불러올까요?`)) return;
+      draft = fromSpec({ ...CHARS.packToSpec(sample), id: CHARS.newId(), label: `내 ${sample.label}` });
+      renderInfo();
+      changed();
+      $('importMsg').textContent = '';
+      showCheck(`"${sample.label}" 샘플을 불러왔어요. 칸마다 들어 있는 그림을 바꿔 보세요.`, 'ok');
+      window.scrollTo({ top: document.querySelector('#slots').getBoundingClientRect().top + window.scrollY - 80, behavior: 'smooth' });
+    };
+    $('samples').appendChild(b);
+  }
+
+  // 만들던 캐릭터가 있으면 이어서 보여준다.
+  try {
+    const saved = JSON.parse(localStorage.getItem(DRAFT_KEY));
+    if (saved && saved.id && saved.slots) draft = { ...blank(), ...saved };
+  } catch {
+    // 처음 열었거나 저장소를 못 쓰면 새로 시작한다.
+  }
+  renderInfo();
+  changed();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1017 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>캐릭터 테마 만들기</title>
+<style>
+  :root {
+    --bg: #f6f5f2; --surface: #ffffff; --surface-2: #f0eee9; --text: #2b2723; --muted: #756d64;
+    --line: #e2ded6; --accent: #6b5bd6; --accent-text: #ffffff; --ok: #2f8a4c; --warn: #a86a00; --err: #c23b32;
+    --thumb: #fbfaf7; color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #1c1b1a; --surface: #262523; --surface-2: #302e2b; --text: #ece8e2; --muted: #a59d93;
+      --line: #3b3935; --accent: #9d90f0; --accent-text: #1c1b1a; --ok: #6cc58a; --warn: #e0a84a; --err: #f07b72;
+      --thumb: #22211f; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #1c1b1a; --surface: #262523; --surface-2: #302e2b; --text: #ece8e2; --muted: #a59d93;
+    --line: #3b3935; --accent: #9d90f0; --accent-text: #1c1b1a; --ok: #6cc58a; --warn: #e0a84a; --err: #f07b72;
+    --thumb: #22211f; color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding-bottom: 200px; background: var(--bg); color: var(--text); font: 14px/1.5 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; }
+  header { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; padding: 14px 16px; border-bottom: 1px solid var(--line); background: var(--surface); }
+  header h1 { font-size: 16px; margin: 0; }
+  header p { margin: 0; color: var(--muted); font-size: 13px; }
+  header a { color: var(--accent); }
+  button, select, input, textarea { font: inherit; color: var(--text); }
+  button, select { background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+  button.primary { background: var(--accent); color: var(--accent-text); border-color: transparent; font-weight: 600; }
+  button[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); border-color: transparent; }
+  button:disabled { opacity: .45; cursor: default; }
+  input[type="text"], textarea { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; width: 100%; min-width: 0; }
+  textarea { font-family: Consolas, monospace; font-size: 12px; resize: vertical; }
+  main { max-width: 1180px; margin: 0 auto; padding: 16px; display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) 300px; }
+  @media (max-width: 1000px) { main { grid-template-columns: minmax(0, 1fr); } }
+  section { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; min-width: 0; }
+  section h2 { font-size: 14px; margin: 0 0 10px; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  section h2 small { color: var(--muted); font-weight: 400; }
+  .col { display: grid; gap: 16px; align-content: start; min-width: 0; }
+  .hint { color: var(--muted); font-size: 13px; margin: 6px 0 0; }
+  .msg { font-size: 13px; margin-top: 8px; }
+  .msg.err { color: var(--err); } .msg.ok { color: var(--ok); } .msg.warn { color: var(--warn); }
+
+  /* 캐릭터 목록 */
+  #catalog { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; }
+  .card { border: 1px solid var(--line); border-radius: 10px; padding: 8px; background: var(--surface-2); display: grid; gap: 4px; justify-items: center; text-align: center; }
+  .card .name { font-weight: 600; font-size: 13px; }
+  .card .id { color: var(--muted); font-size: 11px; }
+  .card button { padding: 3px 10px; font-size: 12px; width: 100%; }
+  .card { position: relative; }
+  .card.mine { border-color: var(--accent); }
+  .card .del { position: absolute; right: -6px; top: -6px; width: 24px; height: 24px; padding: 0; border-radius: 50%; font-size: 12px; }
+  .tag { font-size: 11px; color: var(--accent); font-weight: 600; }
+  .addchar { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+  .addchar h3 { font-size: 14px; margin: 0 0 4px; }
+  .thumb { background: var(--thumb); border-radius: 8px; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; }
+  .thumb > div { background-repeat: no-repeat; background-position: center bottom; background-size: contain; }
+
+  /* 테마 편집 */
+  .field { display: grid; gap: 4px; margin-bottom: 12px; }
+  .field > span { color: var(--muted); font-size: 13px; }
+  #cast { display: grid; gap: 8px; }
+  .member { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); }
+  .member .edit { display: grid; gap: 6px; min-width: 0; }
+  .member .line { display: flex; gap: 8px; align-items: center; color: var(--muted); font-size: 12px; flex-wrap: wrap; }
+  .member input[type="range"] { flex: 1; min-width: 80px; }
+  .member .tools { display: grid; gap: 4px; }
+  .member .tools button { padding: 2px 8px; font-size: 12px; }
+  .empty { color: var(--muted); padding: 20px 8px; text-align: center; }
+  .moods { display: flex; flex-wrap: wrap; gap: 6px; }
+  .moods button { font-size: 13px; padding: 5px 10px; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  code { font-family: Consolas, monospace; font-size: 12px; background: var(--surface-2); padding: 1px 4px; border-radius: 4px; }
+  ol { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 13px; }
+  /* 처음 사이 */
+  #bonds { display: grid; gap: 8px; }
+  .bond { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 10px; align-items: center; padding: 8px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); }
+  .bond .who { display: flex; align-items: center; gap: 4px; }
+  .bond .names { font-size: 13px; font-weight: 600; }
+  .bond .line { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 12px; color: var(--muted); grid-column: 1 / -1; }
+  .bond input[type="range"] { flex: 1; min-width: 120px; }
+  .bond .tier { min-width: 64px; font-weight: 700; }
+  .bond button { padding: 2px 8px; font-size: 12px; }
+  /* 만나면 하는 일 (상호작용) */
+  #acts { display: grid; gap: 10px; }
+  .act { border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); padding: 8px 10px; display: grid; gap: 6px; }
+  .act.off > :not(.act-head) { opacity: .5; }
+  .act-head { display: flex; gap: 6px; align-items: center; }
+  .act-head input[type="text"] { font-weight: 700; padding: 4px 8px; }
+  .act-head button, .act-head label { padding: 3px 9px; font-size: 12px; white-space: nowrap; }
+  .act-head label { display: flex; gap: 4px; align-items: center; color: var(--muted); padding: 0; }
+  .act-head .play { background: var(--accent); color: var(--accent-text); border-color: transparent; font-weight: 600; }
+  .chips { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; font-size: 12px; color: var(--muted); }
+  .chips button { padding: 2px 9px; font-size: 12px; border-radius: 999px; }
+  .chips select { padding: 2px 6px; font-size: 12px; }
+  .beats { list-style: none; padding: 0; margin: 0; display: grid; gap: 4px; }
+  .beat { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; font-size: 13px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 4px 6px; }
+  .beat select { padding: 3px 6px; font-size: 12.5px; border-radius: 6px; }
+  .beat select.who-a { color: var(--accent); font-weight: 700; }
+  .beat select.who-b { color: #c46a1f; font-weight: 700; }
+  .beat select.who-both { color: var(--ok); font-weight: 700; }
+  .beat input[type="text"] { width: auto; flex: 1 1 70px; min-width: 0; padding: 3px 8px; font-size: 12.5px; }
+  .beat .x { padding: 1px 7px; font-size: 12px; }
+  .act .add { justify-self: start; padding: 3px 10px; font-size: 12px; }
+  .act details summary { cursor: pointer; font-size: 12px; color: var(--muted); }
+  .tl { display: grid; gap: 4px; margin-top: 6px; position: relative; user-select: none; touch-action: none; }
+  .tl-hint { font-size: 11.5px; color: var(--muted); }
+  .tl-ruler { position: relative; height: 16px; margin-left: 30px; font-size: 10px; color: var(--muted); }
+  .tl-ruler i { position: absolute; bottom: 0; width: 1px; height: 4px; background: var(--muted); opacity: .5; }
+  .tl-ruler i.big { height: 8px; opacity: .8; }
+  .tl-ruler b { position: absolute; top: -1px; transform: translateX(-50%); font-weight: 400; }
+  .tl-row { display: grid; grid-template-columns: 24px minmax(0, 1fr); align-items: center; gap: 6px; font-size: 11px; font-weight: 700; }
+  .tl-track { position: relative; height: 30px; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; cursor: copy; }
+  .tl-track.drop { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .tl-bar { position: absolute; top: 3px; bottom: 3px; border-radius: 5px; color: #fff; font-size: 12px; line-height: 22px; white-space: nowrap; overflow: hidden; padding: 0 10px 0 4px; cursor: grab; box-shadow: 0 1px 2px rgba(0,0,0,.25); }
+  .tl-bar:active { cursor: grabbing; }
+  .tl-bar.sel { outline: 2px solid var(--text); outline-offset: 1px; }
+  .tl-bar .tl-hit { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: #ff3b30; box-shadow: 0 0 0 1px #fff; pointer-events: none; }
+  .tl-grip { position: absolute; right: 0; top: 0; bottom: 0; width: 9px; cursor: ew-resize; background: rgba(255,255,255,.28); border-left: 1px solid rgba(255,255,255,.7); }
+  .tl-head { position: absolute; top: 0; bottom: 0; left: 0; width: 2px; background: var(--text); pointer-events: none; z-index: 2; display: none; }
+  .tl-tip { position: absolute; right: 0; top: 0; font-size: 11px; background: var(--text); color: var(--bg); padding: 1px 7px; border-radius: 6px; pointer-events: none; }
+  .tl-axis { display: flex; justify-content: flex-end; font-size: 10.5px; color: var(--muted); }
+  .beat.sel { outline: 2px solid var(--accent); }
+  .tl-more { display: grid; gap: 4px; font-size: 12px; margin-top: 6px; }
+  .tl-more div { display: flex; flex-wrap: wrap; gap: 2px 8px; align-items: center; padding: 4px 0; border-top: 1px dashed var(--line); }
+  .tl-more input { width: 56px; padding: 2px 6px; }
+  .tl-more select { padding: 2px 6px; font-size: 12px; }
+  /* 다른 화면으로 가는 것도 단추 모양으로 (글자 링크처럼 보이지 않게) */
+  a.btn { display: inline-block; background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 5px 12px; color: var(--text); text-decoration: none; font-weight: 600; }
+  a.btn:hover { border-color: var(--accent); }
+  a.btn.primary { background: var(--accent); color: var(--accent-text); border-color: transparent; }
+  header .btn { margin-top: 8px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>캐릭터 테마 만들기</h1>
+  <p>캐릭터를 골라 이름을 붙이고, 코드로 동료와 나눠 쓰세요. 화면 아래에서 실제처럼 미리 움직입니다.</p>
+  <a class="btn primary" id="toMaker" href="maker.html">🧸 새 캐릭터 만들기</a>
+</header>
+
+<main>
+  <div class="col">
+    <section>
+      <h2>캐릭터 <small id="catalogCount"></small></h2>
+      <div id="catalog"></div>
+      <div class="addchar">
+        <h3>캐릭터 코드 넣기</h3>
+        <p class="hint" style="margin-top:0">받은 캐릭터 코드나 캐릭터 만들기에서 만든 캐릭터를 넣으면 위 목록에 들어가요. 이 캐릭터를 쓴 테마는 테마 코드에 그림까지 함께 담겨요.</p>
+        <textarea id="charCode" rows="2" placeholder="HW40C1.… 캐릭터 코드를 붙여 넣으세요" aria-label="캐릭터 코드"></textarea>
+        <div class="row"><button id="charAdd">캐릭터 넣기</button><button id="charFile">파일에서 넣기</button></div>
+        <div class="msg" id="charMsg"></div>
+      </div>
+    </section>
+  </div>
+
+  <div class="col">
+    <section>
+      <h2>테마 <small id="castCount"></small></h2>
+      <label class="field"><span>테마 이름</span><input type="text" id="themeName" maxlength="20" placeholder="예: 조용한 사무실"></label>
+      <div id="cast"></div>
+      <div class="row">
+        <select id="loadSelect" aria-label="있는 테마 불러오기"><option value="">있는 테마 불러오기…</option></select>
+        <button id="clear">모두 빼기</button>
+      </div>
+    </section>
+    <section id="bondsBox" hidden>
+      <h2>처음 사이 <small>캐릭터 종류끼리</small></h2>
+      <p class="hint" style="margin-top:0">캐릭터끼리 처음에 얼마나 친한지 정해요. 실제로는 한 마리마다 조금씩 다르게 시작하고, 화면에서 서로 만나면서 사이가 바뀌어요. 캐릭터를 누르고 <b>💞 사이 보기</b>로 지금 사이를 볼 수 있어요.</p>
+      <div id="bonds"></div>
+    </section>
+    <section id="actsBox">
+      <h2>만나면 하는 일 <small>상호작용</small></h2>
+      <p class="hint" style="margin-top:0">두 캐릭터가 만나면 카드에 적힌 순서대로 연기해요. <b>A</b>는 먼저 거는 아이, <b>B</b>는 받는 아이예요 (만난 둘 중 아무나). <b>▶ 해 보기</b>를 누르면 화면 아래 캐릭터 둘이 바로 해 봐요.</p>
+      <p class="msg" id="actsState" style="margin-top:0"></p>
+      <div id="acts"></div>
+      <div class="row">
+        <select id="actTpl" aria-label="틀에서 고르기"><option value="">＋ 틀에서 고르기…</option></select>
+        <button id="actNew">＋ 빈 카드</button>
+        <button id="actReset">기본으로 되돌리기</button>
+      </div>
+    </section>
+    <section>
+      <h2>미리 보기 <small>화면 아래</small></h2>
+      <div class="moods" id="moods">
+        <button data-mood="normal" aria-pressed="true">평소</button>
+        <button data-mood="hurry">퇴근 1시간 전</button>
+        <button data-mood="celebrate">40시간 축하</button>
+        <button data-mood="rest">퇴근 후</button>
+      </div>
+      <div class="msg" id="previewMsg"></div>
+    </section>
+  </div>
+
+  <div class="col">
+    <section>
+      <h2>공유 코드</h2>
+      <textarea id="code" rows="4" readonly aria-label="공유 코드"></textarea>
+      <div class="row"><button class="primary" id="saveMine" disabled>내 테마 목록에 저장</button><label class="hint" style="margin:0;align-self:center"><input type="checkbox" id="saveApply" checked> 바로 적용</label><button id="copyCode">코드 복사</button></div>
+      <div class="msg" id="saveMsg"></div>
+      <p class="hint" id="saveHint">두들링 스크립트가 설치된 브라우저에서 열면 <b>내 테마 목록에 저장</b>을 쓸 수 있어요. 하이웍스 탭으로 돌아가면 목록에 들어와 있어요.</p>
+      <p class="hint">동료에게는 <b>코드 복사</b>로 보내 주세요. 하이웍스 화면 오른쪽 아래 <b>테마 → ＋ 테마 코드 넣기</b>에 붙여 넣으면 그 사람 목록에 이 이름으로 추가됩니다.</p>
+    </section>
+    <section>
+      <h2>코드 불러오기</h2>
+      <textarea id="importCode" rows="3" placeholder="HW40T….. 테마 코드를 붙여 넣으세요" aria-label="불러올 코드"></textarea>
+      <div class="row"><button id="importBtn">불러와서 고치기</button></div>
+      <div class="msg" id="importMsg"></div>
+    </section>
+    <section>
+      <h2>공용 테마로 올리기</h2>
+      <p class="hint" style="margin-top:0">모두의 테마 목록에 기본으로 나오게 하려면 저장소에 <code id="sharedPath">themes/my-theme.json</code> 파일로 이 내용을 넣고 푸시하세요.</p>
+      <label class="field" style="margin-top:8px"><span>파일 이름 (영문 소문자·숫자·-)</span><input type="text" id="fileId" value="my-theme" maxlength="40"></label>
+      <p class="msg warn" id="jsonNote" hidden>직접 넣은 캐릭터가 들어 있어서 공용 테마로는 올릴 수 없어요. 그림이 저장소에 없기 때문이에요. 이 테마는 공유 코드로 나눠 주세요.</p>
+      <textarea id="json" rows="6" readonly aria-label="테마 JSON"></textarea>
+      <div class="row"><button id="copyJson">JSON 복사</button></div>
+    </section>
+  </div>
+</main>
+
+<script>
+  // 하이웍스 화면 대신 미리 보기용 상황을 엔진에 준다.
+  window.HW40 = {
+    mood: 'normal',
+    mascotMood() { return window.HW40.mood; },
+    formatDuration: () => '3시간 12분',
+    latest: null,
+  };
+</script>
+<script src="studio/builtin-characters.js"></script>
+<script src="studio/sprite.js"></script>
+<script src="studio/pack-rules.js"></script>
+<script src="studio/themes.js"></script>
+<script src="studio/chars.js"></script>
+<script src="studio/packs-data.js"></script>
+<script src="studio/bonds.js"></script>
+<script src="studio/mascot.js"></script>
+<script>
+(function () {
+  const T = window.HW40_THEMES;
+  const engine = window.HW40.themes;
+  const myChars = window.HW40.characters;
+  const ART_CSS = window.HW40_BUILTINS.artCss;
+  const $ = (id) => document.getElementById(id);
+  let catalog = engine.catalog();
+  let byId = new Map(catalog.map((c) => [c.id, c]));
+  // 내 캐릭터를 넣거나 지운 뒤 목록을 다시 만든다. 테마에서 사라진 캐릭터는 뺀다.
+  function refreshCatalog() {
+    myChars.reload();
+    catalog = engine.catalog();
+    byId = new Map(catalog.map((c) => [c.id, c]));
+    draft.cast = draft.cast.filter((m) => byId.has(m.id));
+    changed();
+  }
+  const defaultSize = (c) => (c.pack ? c.pack.size : 64);
+
+  let draft = { name: '', cast: [], bonds: {}, acts: null }; // acts: null이면 기본 상호작용
+
+  // ---------- 미리보기 그림 ----------
+  function thumb(c, px) {
+    const box = document.createElement('div');
+    box.className = 'thumb';
+    box.style.width = box.style.height = `${px}px`;
+    if (c.pack) {
+      const idle = c.pack.animations.idle;
+      const img = document.createElement('div');
+      img.style.width = img.style.height = `${px}px`;
+      if (idle.sheet) {
+        img.style.backgroundImage = `url("${idle.sheet}")`;
+        img.style.backgroundSize = `${idle.count * 100}% 100%`;
+        img.style.backgroundPosition = '0 0';
+      } else {
+        img.style.backgroundImage = `url("${idle.frames[0]}")`;
+      }
+      box.appendChild(img);
+    } else {
+      const shadow = box.attachShadow({ mode: 'open' });
+      shadow.innerHTML = `<style>${ART_CSS} svg{display:block;overflow:visible}</style><div class="idle"><svg viewBox="0 0 64 64" width="${px}" height="${px}">${c.art}</svg></div>`;
+    }
+    return box;
+  }
+
+  // ---------- 화면 ----------
+  function renderCatalog() {
+    $('catalogCount').textContent = `${catalog.length}종`;
+    $('catalog').replaceChildren(
+      ...catalog.map((c) => {
+        const card = document.createElement('div');
+        card.className = c.mine ? 'card mine' : 'card';
+        card.appendChild(thumb(c, 64));
+        card.insertAdjacentHTML('beforeend', `<div class="name"></div><div class="id"></div>`);
+        card.querySelector('.name').textContent = c.label + (c.chaser ? ' 👾' : '');
+        card.querySelector('.id').textContent = c.mine ? '내 캐릭터' : c.pack ? '팩' : '기본';
+        if (c.mine) {
+          const del = document.createElement('button');
+          del.className = 'del';
+          del.textContent = '✕';
+          del.title = `${c.label} 지우기`;
+          del.setAttribute('aria-label', `${c.label} 지우기`);
+          del.onclick = () => {
+            if (!window.confirm(`"${c.label}" 캐릭터를 지울까요? 이 브라우저의 목록에서만 지워져요.`)) return;
+            myChars.remove(c.id);
+            refreshCatalog();
+          };
+          card.appendChild(del);
+        }
+        const add = document.createElement('button');
+        add.textContent = '＋ 넣기';
+        add.disabled = draft.cast.length >= T.MAX_CAST;
+        add.onclick = () => {
+          draft.cast.push({ id: c.id, uid: newUid() });
+          changed();
+        };
+        card.appendChild(add);
+        return card;
+      })
+    );
+  }
+
+  function renderCast() {
+    $('castCount').textContent = `${draft.cast.length} / ${T.MAX_CAST}명`;
+    const box = $('cast');
+    if (!draft.cast.length) {
+      box.innerHTML = '<div class="empty">왼쪽에서 캐릭터를 넣어 주세요.</div>';
+      return;
+    }
+    box.replaceChildren(
+      ...draft.cast.map((m, i) => {
+        const c = byId.get(m.id);
+        const row = document.createElement('div');
+        row.className = 'member';
+        row.appendChild(thumb(c, 56));
+        const edit = document.createElement('div');
+        edit.className = 'edit';
+        const size = m.size || defaultSize(c);
+        edit.innerHTML = `
+          <input type="text" maxlength="${T.LABEL_MAX}" aria-label="이름">
+          <div class="line"><span>크기</span><input type="range" min="${T.SIZE_MIN}" max="${T.SIZE_MAX}" step="4" value="${size}" aria-label="크기"><span class="px">${size}px</span></div>`;
+        const name = edit.querySelector('input[type="text"]');
+        name.value = m.name || '';
+        name.placeholder = `${c.label} (이름 바꾸기)`;
+        name.oninput = () => {
+          m.name = name.value.trim() || undefined;
+          changed(false);
+        };
+        const range = edit.querySelector('input[type="range"]');
+        range.oninput = () => {
+          const v = Number(range.value);
+          m.size = v === defaultSize(c) ? undefined : v;
+          edit.querySelector('.px').textContent = `${v}px`;
+          changed(false);
+        };
+        row.appendChild(edit);
+        const tools = document.createElement('div');
+        tools.className = 'tools';
+        const tool = (label, title, fn, disabled) => {
+          const b = document.createElement('button');
+          b.textContent = label;
+          b.title = title;
+          b.disabled = disabled;
+          b.onclick = fn;
+          tools.appendChild(b);
+        };
+        const move = (d) => () => {
+          [draft.cast[i], draft.cast[i + d]] = [draft.cast[i + d], draft.cast[i]];
+          changed();
+        };
+        tool('▲', '앞으로', move(-1), i === 0);
+        tool('▼', '뒤로', move(1), i === draft.cast.length - 1);
+        tool('✕', '빼기', () => {
+          draft.cast.splice(i, 1);
+          changed();
+        }, false);
+        row.appendChild(tools);
+        return row;
+      })
+    );
+  }
+
+  function cleanDraft() {
+    return {
+      name: draft.name,
+      cast: draft.cast.map((m) => {
+        const out = { id: m.id };
+        if (m.name) out.name = m.name;
+        if (m.size) out.size = m.size;
+        if (m.uid) out.uid = m.uid;
+        return out;
+      }),
+      bonds: draft.bonds,
+      ...(draft.acts ? { acts: draft.acts } : {}),
+    };
+  }
+
+  // ---------- 처음 사이 ----------
+  // 출연진에 있는 캐릭터 종류끼리(같은 종류가 둘 이상이면 그 종류끼리도) 처음 우호도를 정한다.
+  // 기본값과 같으면 테마에 적지 않는다.
+  const BOND = engine.bondInfo;
+  const tierOf = (v) => BOND.tiers.find((t) => v >= t.min) || BOND.tiers[BOND.tiers.length - 1];
+  function renderBonds() {
+    const box = $('bondsBox');
+    if (!BOND) {
+      box.hidden = true;
+      return;
+    }
+    const count = {};
+    for (const m of draft.cast) count[m.id] = (count[m.id] || 0) + 1;
+    const ids = Object.keys(count).sort();
+    const pairs = [];
+    for (let i = 0; i < ids.length; i += 1) {
+      for (let j = i; j < ids.length; j += 1) {
+        if (i !== j || count[ids[i]] > 1) pairs.push([ids[i], ids[j]]);
+      }
+    }
+    box.hidden = !pairs.length;
+    $('bonds').replaceChildren(
+      ...pairs.map(([a, b]) => {
+        const k = BOND.typeKey(a, b);
+        const base = BOND.base(a, b);
+        const row = document.createElement('div');
+        row.className = 'bond';
+        const who = document.createElement('div');
+        who.className = 'who';
+        who.append(thumb(byId.get(a), 32), thumb(byId.get(b), 32));
+        const names = document.createElement('div');
+        names.className = 'names';
+        names.textContent = a === b ? `${byId.get(a).label}끼리` : `${byId.get(a).label} ↔ ${byId.get(b).label}`;
+        const line = document.createElement('div');
+        line.className = 'line';
+        line.innerHTML = `<span>앙숙</span><input type="range" min="${BOND.min}" max="${BOND.max}" step="5" aria-label="처음 사이"><span>단짝</span><span class="tier"></span><button type="button">기본값</button>`;
+        const range = line.querySelector('input');
+        const tier = line.querySelector('.tier');
+        const reset = line.querySelector('button');
+        const show = () => {
+          const v = Number(range.value);
+          const t = tierOf(v);
+          tier.textContent = `${t.mark} ${t.label}`;
+          tier.style.color = t.color;
+          reset.disabled = draft.bonds[k] === undefined;
+          reset.title = `기본값으로 (${tierOf(base).label})`;
+        };
+        range.value = draft.bonds[k] !== undefined ? draft.bonds[k] : base;
+        range.oninput = () => {
+          const v = Number(range.value);
+          if (v === base) delete draft.bonds[k];
+          else draft.bonds[k] = v;
+          show();
+          changed(false);
+        };
+        reset.onclick = () => {
+          delete draft.bonds[k];
+          range.value = base;
+          show();
+          changed(false);
+        };
+        show();
+        row.append(who, names, line);
+        return row;
+      })
+    );
+  }
+  // ---------- 만나면 하는 일 (상호작용) ----------
+  // 문장 카드: "A가 [칼 휘두르기] '에잇!' → 맞는 순간 B가 [쓰러지기] '으윽'". 시간표는 "자세히"를 펼쳤을 때만.
+  // 아무것도 고치지 않으면 기본 상호작용을 쓰고(테마에 적지 않음), 하나라도 고치면 이 테마만의 목록이 된다.
+  const BX = window.HW40_BONDS;
+  const clone = (v) => JSON.parse(JSON.stringify(v));
+  let view = []; // 화면에 보이는 목록 (draft.acts 또는 기본 틀의 복사본)
+  const openTl = new WeakMap();
+  const WHO = { a: 'A가', b: 'B가', both: '둘이' };
+  const WHEN_UI = { after: '그다음', hit: '맞는 순간', with: '동시에' };
+  const WHO_COLOR = { a: 'var(--accent)', b: '#c46a1f', both: 'var(--ok)' };
+  const own = () => {
+    draft.acts = view;
+    $('actsState').textContent = `이 테마만의 상호작용 ${view.length}개예요.`;
+    $('actReset').disabled = false;
+  };
+  const opt = (value, label, cur) => `<option value="${value}"${value === cur ? ' selected' : ''}>${label}</option>`;
+  const moveOptions = (cur) => Object.entries(BX.MOVES).map(([k, mv]) => opt(k, `${mv.icon} ${mv.label}`, cur)).join('');
+  const bondLabel = (v) => (v > 0 ? `♥ 사이 +${v}` : v < 0 ? `💔 사이 ${v}` : '사이 그대로');
+
+  function renderActs() {
+    const box = $('actsBox');
+    if (!BX || !BX.MOVES) { box.hidden = true; return; }
+    view = draft.acts || clone(BX.ACT_TEMPLATES);
+    $('actsState').textContent = draft.acts
+      ? `이 테마만의 상호작용 ${view.length}개예요.`
+      : `기본 상호작용 ${view.length}개를 쓰는 중이에요. 하나라도 고치면 이 테마만의 목록이 돼요.`;
+    $('actReset').disabled = !draft.acts;
+    $('acts').replaceChildren(...view.map((act, i) => actCard(act, i)));
+  }
+
+  function actCard(act, index) {
+    const card = document.createElement('div');
+    card.className = 'act' + (act.on === false ? ' off' : '');
+    const edit = (fn, rerender = false) => { fn(); own(); if (rerender) renderActs(); else drawTimeline(card, act); changed(false); };
+
+    const head = document.createElement('div');
+    head.className = 'act-head';
+    head.innerHTML = `<input type="text" maxlength="20" aria-label="상호작용 이름"><label><input type="checkbox"> 켜기</label><button class="play" type="button">▶ 해 보기</button><button type="button" title="이 카드 빼기">✕</button>`;
+    const [name, onBox] = head.querySelectorAll('input');
+    const [play, del] = head.querySelectorAll('button');
+    name.value = act.name || '';
+    name.oninput = () => edit(() => { act.name = name.value; });
+    onBox.checked = act.on !== false;
+    onBox.onchange = () => edit(() => { if (onBox.checked) delete act.on; else act.on = false; }, true);
+    del.onclick = () => edit(() => view.splice(index, 1), true);
+    const msg = document.createElement('div');
+    msg.className = 'msg';
+    play.onclick = () => {
+      const err = window.HW40.bonds && window.HW40.bonds.playAct ? window.HW40.bonds.playAct(act, (startIn, total) => runHead(card, startIn, total)) : '이 화면에서는 해 볼 수 없어요.';
+      msg.className = err ? 'msg warn' : 'msg';
+      msg.textContent = err || '';
+    };
+
+    // 언제: 사이 단계(여러 개), 빈도, 끝나면 사이가 얼마나 바뀌는지
+    const when = document.createElement('div');
+    when.className = 'chips';
+    when.append('언제:');
+    for (const t of BX.TIERS) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = `${t.mark} ${t.label}`;
+      b.setAttribute('aria-pressed', String((act.tiers || []).includes(t.key)));
+      b.onclick = () => edit(() => {
+        const set = new Set(act.tiers || []);
+        if (set.has(t.key)) set.delete(t.key); else set.add(t.key);
+        act.tiers = BX.TIERS.map((x) => x.key).filter((k) => set.has(k));
+      }, true);
+      when.append(b);
+    }
+    const often = document.createElement('select');
+    often.setAttribute('aria-label', '얼마나 자주');
+    often.innerHTML = Object.entries(BX.ACT_OFTEN).map(([k, o]) => opt(k, o.label, act.often || 'some')).join('');
+    often.onchange = () => edit(() => { act.often = often.value; });
+    const bond = document.createElement('select');
+    bond.setAttribute('aria-label', '끝나면 사이');
+    const values = [-10, -8, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 8, 10];
+    if (!values.includes(act.bond || 0)) values.push(act.bond || 0);
+    bond.innerHTML = values.sort((x, y) => x - y).map((v) => opt(String(v), bondLabel(v), String(act.bond || 0))).join('');
+    bond.onchange = () => edit(() => { act.bond = Number(bond.value); });
+    when.append(often, '· 끝나면', bond);
+
+    // 박자들 (문장)
+    const ol = document.createElement('ol');
+    ol.className = 'beats';
+    act.beats.forEach((beat, bi) => {
+      const li = document.createElement('li');
+      li.className = 'beat';
+      li.innerHTML = `${bi ? `<select class="when" aria-label="언제">${Object.entries(WHEN_UI).map(([k, l]) => opt(k, l, beat.when || 'after')).join('')}</select>` : ''}<select class="who who-${beat.who || 'a'}" aria-label="누가">${Object.entries(WHO).map(([k, l]) => opt(k, l, beat.who || 'a')).join('')}</select><select class="mv" aria-label="동작">${moveOptions(beat.move)}</select><input type="text" maxlength="30" placeholder="대사 (없어도 돼요)" aria-label="대사"><button class="x" type="button" title="이 동작 빼기">✕</button>`;
+      const whenSel = li.querySelector('.when');
+      if (whenSel) whenSel.onchange = () => edit(() => { beat.when = whenSel.value; });
+      const who = li.querySelector('.who');
+      who.onchange = () => edit(() => { beat.who = who.value; who.className = `who who-${who.value}`; });
+      const mv = li.querySelector('.mv');
+      mv.onchange = () => edit(() => { beat.move = mv.value; });
+      const line = li.querySelector('input');
+      line.value = beat.line || '';
+      line.oninput = () => edit(() => { if (line.value) beat.line = line.value; else delete beat.line; });
+      const x = li.querySelector('.x');
+      x.disabled = act.beats.length < 2;
+      x.onclick = () => edit(() => act.beats.splice(bi, 1), true);
+      li.addEventListener('focusin', () => selectBeat(card, act, bi));
+      if (selTl.get(act) === bi) li.classList.add('sel');
+      ol.append(li);
+    });
+    const add = document.createElement('button');
+    add.type = 'button';
+    add.className = 'add';
+    add.textContent = '＋ 이어서 하기';
+    add.disabled = act.beats.length >= 8;
+    add.onclick = () => edit(() => {
+      const last = act.beats[act.beats.length - 1];
+      act.beats.push({ who: last && last.who === 'a' ? 'b' : 'a', move: 'hop', when: 'after' });
+    }, true);
+
+    // 시간표: 영상 편집기처럼 막대를 끌어 옮기고 길이를 바꾼다
+    const det = document.createElement('details');
+    det.open = Boolean(openTl.get(act));
+    det.ontoggle = () => openTl.set(act, det.open);
+    det.innerHTML = '<summary>⏱ 시간표로 직접 고치기 (끌어서 옮기기 · 길이 · 기다림 · 앞뒤)</summary><div class="tl"></div><div class="tl-more"></div>';
+    card.append(head, when, ol, add, det, msg);
+    drawTimeline(card, act);
+    wireTimeline(card, act);
+    return card;
+  }
+
+  // 시간표 그리기. A·B 줄에 동작 막대, 막대 안 빨간 선은 "맞는 순간", 오른쪽 끝 손잡이는 길이.
+  // keepSpan: 끄는 동안에는 눈금 폭을 고정해 막대가 손을 따라오게 한다.
+  const selTl = new WeakMap(); // 카드마다 고른 박자
+  function drawTimeline(card, act, keepSpan) {
+    const tl = card.querySelector('.tl');
+    const more = card.querySelector('.tl-more');
+    if (!tl) return;
+    const { beats, total } = BX.schedule(act.beats);
+    const span = keepSpan || Math.max(2000, Math.ceil((total + 900) / 500) * 500);
+    tl.dataset.span = span;
+    const pct = (ms) => `${(ms / span) * 100}%`;
+    const sel = selTl.get(act);
+    const tip = tl.querySelector('.tl-tip');
+    tl.replaceChildren();
+    const hint = document.createElement('div');
+    hint.className = 'tl-hint';
+    hint.textContent = '막대를 끌어 옮기고, 오른쪽 끝을 끌어 길이를 바꿔요. A↔B 줄로 끌면 하는 아이가 바뀌어요. 다른 막대의 시작·끝·맞는 순간에 착 붙어요. 빈 곳을 두 번 누르면 동작이 생겨요.';
+    tl.append(hint);
+    const ruler = document.createElement('div');
+    ruler.className = 'tl-ruler';
+    for (let t = 0; t <= span; t += 250) {
+      const big = t % 1000 === 0;
+      if (t % 500 && span > 4000) continue;
+      ruler.insertAdjacentHTML('beforeend', `<i class="${big ? 'big' : ''}" style="left:${pct(t)}"></i>${big ? `<b style="left:${pct(t)}">${t / 1000}초</b>` : ''}`);
+    }
+    tl.append(ruler);
+    for (const side of ['a', 'b']) {
+      const row = document.createElement('div');
+      row.className = 'tl-row';
+      row.innerHTML = `<span style="color:${WHO_COLOR[side]}">${side.toUpperCase()}</span><div class="tl-track" data-side="${side}" title="빈 곳을 두 번 누르면 ${side.toUpperCase()}의 동작이 생겨요"><div class="tl-head"></div></div>`;
+      const track = row.querySelector('.tl-track');
+      beats.forEach((b, i) => {
+        if (b.who !== side && b.who !== 'both') return;
+        const mv = BX.MOVES[b.move] || BX.MOVES.stand;
+        const bar = document.createElement('div');
+        bar.className = 'tl-bar' + (sel === i ? ' sel' : '');
+        bar.dataset.i = i;
+        bar.style.left = pct(b.start);
+        bar.style.width = pct(b.end - b.start);
+        bar.style.background = WHO_COLOR[b.who];
+        bar.title = `${i + 1}. ${mv.label}: ${(b.start / 1000).toFixed(2)}초 ~ ${(b.end / 1000).toFixed(2)}초`;
+        bar.innerHTML = `<span>${i + 1} ${mv.icon} ${mv.label}</span>${mv.hit !== undefined ? `<div class="tl-hit" style="left:${mv.hit * 100}%" title="맞는 순간"></div>` : ''}<div class="tl-grip" title="끌어서 길이 바꾸기"></div>`;
+        track.append(bar);
+      });
+      tl.append(row);
+    }
+    const axis = document.createElement('div');
+    axis.className = 'tl-axis';
+    axis.textContent = `전체 ${(total / 1000).toFixed(1)}초`;
+    tl.append(axis);
+    if (tip) tl.append(tip);
+    // 박자마다 기다림·길이(초)와 앞뒤. 입력 중인 칸을 지우지 않게, 박자 수가 바뀔 때만 새로 만든다.
+    if (more.childElementCount === act.beats.length) return;
+    more.replaceChildren(...act.beats.map((beat, bi) => {
+      const mv = BX.MOVES[beat.move] || BX.MOVES.stand;
+      const row = document.createElement('div');
+      row.innerHTML = `<b>${bi + 1}.</b><span class="nm"></span><label>${bi ? '기준보다' : '처음부터'} <input type="number" min="-5" max="5" step="0.05" aria-label="기다림(초)"> 초 늦게</label><label>길이 <input type="number" min="0.15" max="6" step="0.05" aria-label="길이(초)"> 초</label><label>앞뒤 <select aria-label="누가 앞에"><option value="">움직이는 아이가 앞</option><option value="back">움직이는 아이가 뒤</option></select></label>`;
+      row.querySelector('.nm').textContent = `${mv.icon} ${mv.label}`;
+      const [wait, len] = row.querySelectorAll('input');
+      wait.value = ((beat.wait || 0) / 1000).toFixed(2);
+      wait.oninput = () => {
+        const ms = Math.round(Math.min(5, Math.max(-5, Number(wait.value) || 0)) * 1000);
+        if (ms) beat.wait = ms; else delete beat.wait;
+        own();
+        drawTimeline(card, act);
+        changed(false);
+      };
+      len.value = ((beat.ms || mv.ms) / 1000).toFixed(2);
+      len.oninput = () => {
+        const ms = Math.round(Math.min(6, Math.max(0.15, Number(len.value) || 0)) * 1000);
+        if (ms === (BX.MOVES[beat.move] || BX.MOVES.stand).ms) delete beat.ms; else beat.ms = ms;
+        own();
+        drawTimeline(card, act);
+        changed(false);
+      };
+      const layer = row.querySelector('select');
+      layer.value = beat.layer === 'back' ? 'back' : '';
+      layer.onchange = () => {
+        if (layer.value) beat.layer = layer.value; else delete beat.layer;
+        own();
+        changed(false);
+      };
+      return row;
+    }));
+  }
+
+  // 막대와 문장 줄을 함께 고른다 (어느 막대가 어느 문장인지 보이게)
+  function selectBeat(card, act, i) {
+    selTl.set(act, i);
+    card.querySelectorAll('.tl-bar').forEach((b) => b.classList.toggle('sel', Number(b.dataset.i) === i));
+    card.querySelectorAll('.beats > li').forEach((li, n) => li.classList.toggle('sel', n === i));
+  }
+
+  // 시간표 손잡이: 끌어 옮기기(기다림), 오른쪽 끝 끌기(길이), 위아래 줄 옮기기(A↔B), 착 붙기, 빈 곳 두 번 눌러 더하기
+  const SNAP_PX = 8;
+  function wireTimeline(card, act) {
+    const tl = card.querySelector('.tl');
+    let drag = null;
+    const trackAt = (y) => [...tl.querySelectorAll('.tl-track')].find((t) => {
+      const r = t.getBoundingClientRect();
+      return y >= r.top - 4 && y <= r.bottom + 4;
+    });
+    const showTip = (text) => {
+      let tip = tl.querySelector('.tl-tip');
+      if (!tip) {
+        tip = document.createElement('div');
+        tip.className = 'tl-tip';
+        tl.append(tip);
+      }
+      tip.textContent = text;
+    };
+    tl.addEventListener('pointerdown', (e) => {
+      const bar = e.target.closest('.tl-bar');
+      if (!bar || e.button !== 0) return;
+      e.preventDefault();
+      const i = Number(bar.dataset.i);
+      const sch = BX.schedule(act.beats).beats[i];
+      const track = bar.parentElement;
+      drag = {
+        i, mode: e.target.classList.contains('tl-grip') ? 'len' : 'move', x0: e.clientX, w: track.clientWidth, span: Number(tl.dataset.span),
+        start: sch.start, dur: sch.end - sch.start, anchor: sch.anchor, hitFrac: (sch.hit - sch.start) / Math.max(1, sch.end - sch.start), moved: false,
+      };
+      tl.setPointerCapture(e.pointerId);
+      selectBeat(card, act, i);
+    });
+    tl.addEventListener('pointermove', (e) => {
+      if (!drag) return;
+      if (!drag.moved && Math.abs(e.clientX - drag.x0) < 3 && !(drag.mode === 'move' && trackAt(e.clientY) && trackAt(e.clientY).dataset.side !== act.beats[drag.i].who)) return;
+      drag.moved = true;
+      const beat = act.beats[drag.i];
+      const dms = ((e.clientX - drag.x0) / drag.w) * drag.span;
+      const snapMs = (SNAP_PX / drag.w) * drag.span;
+      // 다른 막대의 시작·끝·맞는 순간에 착 붙는다
+      const points = [0];
+      BX.schedule(act.beats).beats.forEach((b, n) => { if (n !== drag.i) points.push(b.start, b.end, b.hit); });
+      const snap = (t) => points.reduce((best, p) => (Math.abs(p - t) <= snapMs && (best === null || Math.abs(p - t) < Math.abs(best - t)) ? p : best), null);
+      if (drag.mode === 'move') {
+        let start = Math.max(0, drag.start + dms);
+        const s1 = snap(start);
+        const s2 = drag.hitFrac < 1 ? snap(start + drag.dur * drag.hitFrac) : null;
+        if (s1 !== null) start = s1;
+        else if (s2 !== null) start = Math.max(0, s2 - drag.dur * drag.hitFrac);
+        else start = Math.round(start / 50) * 50;
+        const wait = Math.round(start - drag.anchor);
+        if (wait) beat.wait = wait; else delete beat.wait;
+        const track = trackAt(e.clientY);
+        if (beat.who !== 'both' && track && track.dataset.side !== beat.who) beat.who = track.dataset.side;
+        showTip(`${(start / 1000).toFixed(2)}초에 시작 · ${beat.who === 'both' ? '둘이' : beat.who.toUpperCase()}`);
+      } else {
+        let end = drag.start + Math.max(150, drag.dur + dms);
+        const s1 = snap(end);
+        end = s1 !== null && s1 - drag.start >= 150 ? s1 : drag.start + Math.round((end - drag.start) / 50) * 50;
+        const ms = Math.min(6000, Math.max(150, Math.round(end - drag.start)));
+        if (ms === (BX.MOVES[beat.move] || BX.MOVES.stand).ms) delete beat.ms; else beat.ms = ms;
+        showTip(`길이 ${(ms / 1000).toFixed(2)}초`);
+      }
+      drawTimeline(card, act, drag.span);
+    });
+    const finish = () => {
+      if (!drag) return;
+      const moved = drag.moved;
+      drag = null;
+      const tip = tl.querySelector('.tl-tip');
+      if (tip) tip.remove();
+      if (moved) {
+        own();
+        changed(false);
+        renderActs();
+      }
+    };
+    tl.addEventListener('pointerup', finish);
+    tl.addEventListener('pointercancel', finish);
+    tl.addEventListener('dblclick', (e) => {
+      const track = e.target.closest('.tl-track');
+      if (!track || e.target.closest('.tl-bar')) return;
+      if (act.beats.length >= 8) {
+        showTip('동작은 8개까지예요');
+        setTimeout(() => { const t = tl.querySelector('.tl-tip'); if (t) t.remove(); }, 1500);
+        return;
+      }
+      const r = track.getBoundingClientRect();
+      const at = Math.max(0, ((e.clientX - r.left) / r.width) * Number(tl.dataset.span));
+      const sch = BX.schedule(act.beats).beats;
+      const prev = sch[sch.length - 1];
+      const beat = { who: track.dataset.side, move: 'hop', when: 'with' };
+      const wait = Math.round((at - prev.start) / 50) * 50;
+      if (wait) beat.wait = wait;
+      act.beats.push(beat);
+      selTl.set(act, act.beats.length - 1);
+      own();
+      renderActs();
+      changed(false);
+    });
+  }
+
+  // ▶ 해 보기를 누르면 시간표 위로 재생 줄이 화면 속 연기와 같이 지나간다
+  function runHead(card, startIn, total) {
+    const tl = card.querySelector('.tl');
+    if (!tl) return;
+    const span = Number(tl.dataset.span) || total;
+    for (const head of tl.querySelectorAll('.tl-head')) {
+      head.style.display = 'block';
+      const a = head.animate([{ left: '0%' }, { left: `${(total / span) * 100}%` }], { duration: total, delay: startIn, easing: 'linear', fill: 'forwards' });
+      a.finished.then(() => setTimeout(() => { head.style.display = 'none'; }, 400)).catch(() => {});
+    }
+  }
+
+  if (BX && BX.ACT_TEMPLATES) {
+    $('actTpl').insertAdjacentHTML('beforeend', BX.ACT_TEMPLATES.map((t, i) => opt(String(i), `${t.name} (${t.tiers.map((k) => BX.TIERS.find((x) => x.key === k).label).join('·')})`, '')).join(''));
+    $('actTpl').onchange = () => {
+      const t = BX.ACT_TEMPLATES[Number($('actTpl').value)];
+      $('actTpl').value = '';
+      if (!t) return;
+      view.push(clone(t));
+      own();
+      renderActs();
+      changed(false);
+    };
+    $('actNew').onclick = () => {
+      view.push({ name: '새 상호작용', tiers: ['best', 'friend'], often: 'some', bond: 2, beats: [{ who: 'a', move: 'wave', line: '안녕!' }, { who: 'b', move: 'hop', when: 'after', line: '안녕!' }] });
+      own();
+      renderActs();
+      changed(false);
+    };
+    $('actReset').onclick = () => {
+      draft.acts = null;
+      renderActs();
+      changed(false);
+    };
+  }
+
+  // 테마 안에서 이 아이를 알아보는 표식. 우호도가 이 표식에 붙어서, 순서를 바꾸거나 다른 아이를 빼도 그대로 남는다.
+  const newUid = () => `u${Math.random().toString(36).slice(2, 8)}`;
+
+  let previewTimer = 0;
+  let codeStamp = 0;
+  function changed(rerender = true) {
+    if (rerender) {
+      renderCast();
+      renderCatalog();
+      renderBonds();
+      renderActs();
+    }
+    const raw = cleanDraft();
+    if (!raw.cast.length) {
+      $('code').value = '';
+      $('json').value = '';
+      $('previewMsg').textContent = '캐릭터를 넣으면 화면 아래에 나옵니다.';
+      return;
+    }
+    const { theme } = T.normalizeTheme(raw);
+    // 내 캐릭터가 들어 있으면 그림까지 담은 코드가 된다 (만드는 데 잠깐 걸린다).
+    const stamp = (codeStamp += 1);
+    engine.code(theme).then((code) => {
+      if (stamp === codeStamp) $('code').value = code;
+    });
+    const hasMine = theme.cast.some((m) => byId.get(m.id) && byId.get(m.id).mine);
+    $('jsonNote').hidden = !hasMine;
+    $('json').value = hasMine ? '' : JSON.stringify(theme, null, 2);
+    $('copyJson').disabled = hasMine;
+    clearTimeout(previewTimer);
+    previewTimer = setTimeout(() => {
+      engine.preview(theme);
+      $('previewMsg').textContent = '';
+    }, 250);
+  }
+
+  function load(theme) {
+    // 표식이 없는 옛 테마는 하이웍스 화면과 같은 방식("종류-몇 번째")으로 표식을 붙여, 이미 쌓인 사이가 이어지게 한다.
+    const keys = window.HW40_BONDS ? window.HW40_BONDS.memberKeys(theme.cast) : [];
+    const cast = theme.cast.map((m, i) => ({ ...m, uid: m.uid || keys[i] || newUid() })).filter((m) => byId.has(m.id));
+    draft = { name: theme.name === '기본' ? '' : theme.name, cast, bonds: { ...(theme.bonds || {}) }, acts: theme.acts ? clone(theme.acts) : null };
+    $('themeName').value = draft.name;
+    changed();
+  }
+
+  // ---------- 입력 ----------
+  $('themeName').oninput = () => {
+    draft.name = $('themeName').value;
+    changed(false);
+  };
+  $('clear').onclick = () => {
+    draft.cast = [];
+    changed();
+  };
+  for (const t of engine.list().filter((t) => t.source !== 'mine')) {
+    const o = document.createElement('option');
+    o.value = t.key;
+    o.textContent = t.source === 'shared' ? `${t.name} (공용)` : t.name;
+    $('loadSelect').appendChild(o);
+  }
+  $('loadSelect').onchange = () => {
+    const t = engine.list().find((x) => x.key === $('loadSelect').value);
+    if (t) load(t);
+    $('loadSelect').value = '';
+  };
+
+  const copy = async (text, button) => {
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      const old = button.textContent;
+      button.textContent = '복사했어요';
+      setTimeout(() => { button.textContent = old; }, 1500);
+    } catch {
+      window.prompt('복사해 주세요.', text);
+    }
+  };
+  $('copyCode').onclick = () => copy($('code').value, $('copyCode'));
+  // 두들링 스크립트가 이 화면에서 우편함을 열어 두면, 만든 테마를 하이웍스 내 목록으로 바로 보낸다.
+  const inboxReady = () => {
+    $('saveMine').disabled = false;
+    $('saveHint').textContent = '저장한 뒤 하이웍스 탭으로 돌아가면 내 테마 목록에 들어와 있어요. 하이웍스 탭이 이미 열려 있으면 몇 초 안에 들어가요.';
+  };
+  if (document.documentElement.dataset.hw40Inbox === '1') inboxReady();
+  // 하이웍스 화면 위 팝업(창 안의 창)으로 열렸을 때: 두들링 스크립트 대신 바깥 화면과 주고받는다.
+  const embedded = window.parent !== window && new URLSearchParams(location.search).has('embed');
+  if (embedded) {
+    document.documentElement.classList.add('embedded');
+    $('toMaker').href = 'maker.html?embed=1';
+    window.parent.postMessage({ type: 'hw40-embed-hello', title: '🎨 테마 만들기' }, '*');
+  }
+  // "이름"을/를: 마지막 글자에 받침이 있으면 을
+  const quoteObj = (name) => {
+    const code = name.charCodeAt(name.length - 1) - 0xac00;
+    return `"${name}"${code >= 0 && code <= 11171 && code % 28 ? '을' : '를'}`;
+  };
+  let saveId = 0;
+  window.addEventListener('message', (e) => {
+    const fromParent = embedded && e.source === window.parent;
+    if ((e.origin !== location.origin && !fromParent) || !e.data) return;
+    if (fromParent && e.data.type === 'hw40-chars' && Array.isArray(e.data.specs) && e.data.specs.length) {
+      try { myChars.addSpecs(e.data.specs); } catch { /* 못 읽는 캐릭터는 건너뛴다 */ }
+      refreshCatalog();
+    }
+    if (e.data.type === 'hw40-inbox-ready') {
+      inboxReady();
+      if (e.data.embedded) $('saveHint').textContent = '저장하면 바로 내 테마 목록에 들어가요.';
+    }
+    if (e.data.type === 'hw40-theme-saved' && e.data.id === saveId) {
+      const msg = $('saveMsg');
+      msg.className = `msg ${e.data.ok ? 'ok' : 'err'}`;
+      msg.textContent = e.data.ok && e.data.embedded
+        ? `${quoteObj($('themeName').value || '내 테마')} 내 테마 목록에 넣었어요${$('saveApply').checked ? '. 바로 그 테마로 바뀌었어요' : ''}.`
+        : e.data.ok
+        ? `${quoteObj($('themeName').value || '내 테마')} 보냈어요. 하이웍스 탭으로 가면 목록에 있어요${$('saveApply').checked ? '. 바로 그 테마로 바뀌어요' : ''}.`
+        : '보내지 못했어요. 코드 복사로 넣어 주세요.';
+    }
+  });
+  $('saveMine').onclick = () => {
+    const code = $('code').value;
+    const msg = $('saveMsg');
+    if (!code) {
+      msg.className = 'msg err';
+      msg.textContent = '아직 코드가 없어요. 캐릭터를 넣고 이름을 정해 주세요.';
+      return;
+    }
+    saveId += 1;
+    const save = { type: 'hw40-save-theme', code, apply: $('saveApply').checked, id: saveId };
+    if (embedded) window.parent.postMessage(save, '*');
+    else window.postMessage(save, location.origin);
+  };
+  $('copyJson').onclick = () => copy($('json').value, $('copyJson'));
+  $('fileId').oninput = () => {
+    const id = $('fileId').value.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/^-+/, '') || 'my-theme';
+    $('sharedPath').textContent = `themes/${id}.json`;
+  };
+
+  $('importBtn').onclick = async () => {
+    const msg = $('importMsg');
+    try {
+      const { theme: raw, characters } = await T.decodeThemeCode($('importCode').value);
+      // 테마 코드에 캐릭터가 담겨 있으면 내 캐릭터 목록에도 넣는다.
+      if (characters.length) {
+        myChars.addSpecs(characters);
+        refreshCatalog();
+      }
+      const { theme, warnings } = T.normalizeTheme(raw, new Set(byId.keys()));
+      load(theme);
+      msg.className = warnings.length ? 'msg warn' : 'msg ok';
+      msg.textContent = `"${theme.name}" 테마를 불러왔어요.${warnings.length ? ` ${warnings.join(' ')}` : ''}`;
+    } catch (e) {
+      msg.className = 'msg err';
+      msg.textContent = e.message;
+    }
+  };
+
+  for (const b of document.querySelectorAll('#moods button')) {
+    b.onclick = () => {
+      window.HW40.mood = b.dataset.mood;
+      for (const x of document.querySelectorAll('#moods button')) x.setAttribute('aria-pressed', String(x === b));
+    };
+  }
+
+  // ---------- 캐릭터 코드 넣기 ----------
+  async function addChar(code) {
+    const msg = $('charMsg');
+    try {
+      const r = await myChars.addCode(code);
+      refreshCatalog();
+      msg.className = 'msg ok';
+      msg.textContent = r.replaced ? `"${r.name}" 캐릭터를 새 그림으로 바꿨어요.` : `"${r.name}" 캐릭터를 넣었어요. 목록에서 ＋ 넣기를 눌러 테마에 넣으세요.`;
+      $('charCode').value = '';
+    } catch (e) {
+      msg.className = 'msg err';
+      msg.textContent = String(code).trim().startsWith('HW40T') ? '테마 코드예요. 오른쪽 "코드 불러오기"에 넣어 주세요.' : e.message;
+    }
+  }
+  $('charAdd').onclick = () => addChar($('charCode').value);
+  $('charFile').onclick = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.txt,text/plain';
+    input.onchange = async () => input.files[0] && addChar(await input.files[0].text());
+    input.click();
+  };
+  // 캐릭터 만들기 화면(다른 탭)에서 "테마 만들기에 넣기"를 누르면 목록을 다시 읽는다.
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'hw40-my-chars') refreshCatalog();
+  });
+
+  // 처음에는 기본 테마를 불러온다.
+  load(engine.list()[0]);
+})();
+</script>
+</body>
+</html>
